@@ -3,13 +3,20 @@
 #include <cstdlib>
 #include "bnn.h"
 #include "model_dense.h"
+#ifdef _WIN32
+#define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
+#define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
+#else
+#define TESTROUTE "/home/xl722/bnn_h/data/test_b.dat"
+#define LABELROUTE "/home/xl722/bnn_h/data/label.dat"
+#endif // WIN32
+
 
 using namespace std;
 const int TEST_SIZE = 1000;
 
 void read_test_images(int8_t** test_images) {
-	std::ifstream infile("e:/Computer/HLS/BNN/data/test_b.dat");
-	//std::ifstream infile("/home/xl722/bnn_h/data/test_b.dat");
+	std::ifstream infile(TESTROUTE);
 	if (infile.is_open()) {
 		for (int index = 0; index < TEST_SIZE; index++) {
 			for (int pixel = 0; pixel < 784; pixel++) {
@@ -23,8 +30,7 @@ void read_test_images(int8_t** test_images) {
 }
 
 void read_test_labels(int test_labels[TEST_SIZE]) {
-	std::ifstream infile("e:/Computer/HLS/BNN/data/label.dat");
-	//std::ifstream infile("/home/xl722/bnn_h/data/label.dat");
+	std::ifstream infile(LABELROUTE);
 	if (infile.is_open()) {
 		for (int index = 0; index < TEST_SIZE; index++) {
 			infile >> test_labels[index];
