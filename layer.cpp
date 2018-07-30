@@ -205,7 +205,6 @@ void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], const fix miu[MAX_F],
 
 	for (int m = 0; m < 64; m++){
 #pragma HLS PIPELINE
-#pragma HLS UNROLL
 		if (m < M){
 			fix s = hls::sqrt(sigma[m] + 0.00001);
 			k[m] = gamma[m] / s;
@@ -222,7 +221,7 @@ void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], const fix miu[MAX_F],
 			{
 				if (y < I)
 				{
-					for (int m = 0; m < 64; m++)
+					loop_m:for (int m = 0; m < 64; m++)
 					{
 #pragma HLS UNROLL						
 						if (m < M)
