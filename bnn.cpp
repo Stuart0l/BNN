@@ -9,11 +9,11 @@ using namespace std;
 
 void bnn(bit x[I_WIDTH1 * I_WIDTH1], bit output[O_WIDTH*O_WIDTH * 64]){
 	bit mem_conv1[MAX_FMAP] = {0};
-#pragma HLS ARRAY_PARTITON variable=mem_conv1 block factor=64
+#pragma HLS ARRAY_PARTITION variable=mem_conv1 block factor=64
 	bit mem_conv2[MAX_FMAP] = {0};
-#pragma HLS ARRAY_PARTITON variable=mem_conv2 block factor=64
+#pragma HLS ARRAY_PARTITION variable=mem_conv2 block factor=64
 	fix mem_conv3[MAX_FMAP] = { 0 };
-#pragma HLS ARRAY_PARTITON variable=mem_conv3 block factor=64
+#pragma HLS ARRAY_PARTITION variable=mem_conv3 block factor=64
 
 
 	for (int i = 0; i < I_WIDTH1; i++)

@@ -171,36 +171,46 @@ void max_pool(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I){
 
 	for (int i = 0; i < MAX_FMAP; i++) output[i] = 0;
 
-	for (int m = 0; m < 64; m++){
-		if (m >= M) break;
-		for (int x = 0; x < 32; x++){
-			if (x >= O) break;
+	for (int x = 0; x < 32; x++){
+		if (x < O)
+		{
 			for (int y = 0; y < 32; y++){
-				if (y >= O) break;
-				int o_index = x + y * 32 + m * 1024;
-				bit max = 0;
-				for (int c = 0; c < 2; c++){
-					for (int r = 0; r < 2; r++){
-						int i_index = 2 * x + c + (2 * y + r) * 32 + m * 1024;
-						if (input[i_index]) max = input[i_index]; //
+				if (y < O)
+				{
+					for (int m = 0; m < 64; m++)
+					{
+#pragma HLS UNROLL
+						int o_index = x + y * 32 + m * 1024;
+						bit max = 0;
+						for (int c = 0; c < 2; c++){
+							for (int r = 0; r < 2; r++){
+								int i_index = 2 * x + c + (2 * y + r) * 32 + m * 1024;
+								if (input[i_index]) max = input[i_index]; //
+							}
+						}
+						output[o_index] = max;
 					}
 				}
-				output[o_index] = max;
 			}
 		}
 	}
 }
 
-void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], fix miu[MAX_F], const float sigma[MAX_F], const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I){
+void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], const fix miu[MAX_F], const float sigma[MAX_F], const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I){
 	int ifmap_size = I * I;
 
 	fix k[64], h[64];
+#pragma HLS ARRAY_PARTITION variable=k complete
+#pragma HLS ARRAY_PARTITION variable=h complete
 
 	for (int m = 0; m < 64; m++){
+#pragma HLS PIPELINE
+#pragma HLS UNROLL
 		if (m < M){
 			fix s = hls::sqrt(sigma[m] + 0.00001);
 			k[m] = gamma[m] / s;
-			h[m] = miu[m].getNeg() * gamma[m] / s + beta[m];
+			fix tmp_miu = miu[m];
+			h[m] = tmp_miu.getNeg() * gamma[m] / s + beta[m];
 		}
 	}
 

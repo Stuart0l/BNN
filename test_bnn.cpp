@@ -7,8 +7,8 @@
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
 #else
-#define TESTROUTE "/home/xl722/bnn_h/data/test_b.dat"
-#define LABELROUTE "/home/xl722/bnn_h/data/label.dat"
+#define TESTROUTE "/home/xl722/BNN/data/test_b.dat"
+#define LABELROUTE "/home/xl722/BNN/data/label.dat"
 #endif // WIN32
 
 
