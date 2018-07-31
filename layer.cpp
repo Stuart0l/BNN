@@ -6,26 +6,31 @@
 using namespace std;
 
 void pad(bit input[64][32][32], bit output[64][32][32], int M, int I) {
-	const int ifmap_size = I * I;
-	const int ofmap_size = (I+PADDING) * (I+PADDING);
+	//const int ifmap_size = I * I;
+	//const int ofmap_size = (I+PADDING) * (I+PADDING);
 
-	for (int m = 0; m < MAX_F; m++)
-		for (int j = 0; j < MAX_WIDTH; j++)
-			for (int i = 0; i < MAX_WIDTH; i++)
+	for (int j = 0; j < MAX_WIDTH; j++)
+		for (int i = 0; i < MAX_WIDTH; i++)
+			for (int m = 0; m < MAX_F; m++)
+#pragma HLS UNROLL
 				output[m][j][i] = 0;
 
-	for (int m = 0; m < 64; m++)
+
+	for (int x = 0; x < 32; x++)
 	{
-		if (m < M)
+		if (x < I)
 		{
-			for (int x = 0; x < 32; x++)
+			for (int y = 0; y < 32; y++)
 			{
-				if (x < I)
+				if (y < I)
 				{
-					for (int y = 0; y < 32; y++)
+					for (int m = 0; m < 64; m++)
 					{
-						if (y < I)
+#pragma HLS UNROLL
+						if (m < M)
+						{
 							output[m][y + PADDING / 2][x + PADDING / 2] = input[m][y][x];
+						}
 					}
 				}
 			}
@@ -42,14 +47,15 @@ inline bool if_mac(int x, int y, int I)
 
 inline void load_weight(int n, int m, int N, bit w_buff[64][5][5], const bit w[MAX_W_CONV])
 {
-	for (int wn = 0; wn < 8; wn++)
+	for (int wm = 0; wm < 8; wm++)
 	{
-		for (int wm = 0; wm < 8; wm++)
+		for (int wn = 0; wn < 8; wn++)
 		{
 			for (int i = 0; i < F; i++)
 			{
 				for (int j = 0; j < F; j++)
 				{
+#pragma HLS PIPELINE rewind				
 					int w_index = i + j * F + (n + wn + (m + wm) * N) * FILTER_SIZE;
 					w_buff[wm*8+wn][j][i] = w[w_index];
 				}
@@ -67,6 +73,7 @@ inline void load_ifmap(int m, bit i_buff[8][32][32], bit in[64][32][32])
 		{
 			for (int fm = 0; fm < 8; fm++)
 			{
+#pragma HLS UNROLL
 				i_buff[fm][j][i] = in[m + fm][j][i];
 			}
 		}
@@ -75,28 +82,15 @@ inline void load_ifmap(int m, bit i_buff[8][32][32], bit in[64][32][32])
 
 inline void store_ofmap(int n, fix o_buff[8][32][32], fix out[64][32][32])
 {
-	for (int fn = 0; fn < 8; fn++)
-	{
-		for (int i = 0; i < 32; i++)
-		{
-			for (int j = 0; j < 32; j++)
-			{
-				int o_index = i + j * 32 + (n + fn) * 1024;
-				out[n + fn][j][i] = o_buff[fn][j][i];
-			}
-		}
-	}
-}
-
-inline void reset_outbuff(fix o_buff[8][32][32])
-{
 	for (int i = 0; i < 32; i++)
 	{
 		for (int j = 0; j < 32; j++)
 		{
-			for (int n = 0; n < 8; n++){
-#pragma HLS UNROLL
-				o_buff[n][j][i] = 0.;
+#pragma HLS PIPELINE rewind
+			for (int fn = 0; fn < 8; fn++)
+			{
+				out[n + fn][j][i] = o_buff[fn][j][i];
+				o_buff[fn][j][i] = 0.;
 			}
 		}
 	}
@@ -118,8 +112,8 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 	bit weight_buffer[64][5][5];
 #pragma HLS ARRAY_PARTITION variable=weight_buffer complete dim=1
 	int O = I - F + 1;
-	int ifmap_size = I * I;
-	int ofmap_size = O * O;
+	//int ifmap_size = I * I;
+	//int ofmap_size = O * O;
 
 	float var_w = 2. / (F*F * M);
 	fix con = hls::sqrt(var_w);
@@ -128,6 +122,7 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 	{
 		for (int m = 0; m < M; m += 8)
 		{
+//#pragma HLS DATAFLOW		
 			load_weight(n, m, N, weight_buffer, weight);
 			load_ifmap(m, input_buffer, input);
 			for (int c = 0; c < F; c++)
@@ -167,18 +162,18 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 			}
 		}
 		store_ofmap(n, output_buffer, output);
-		reset_outbuff(output_buffer);
 	}
 }
 
 void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 	int O = I / 2;
-	int ifmap_size = I * I;
-	int ofmap_size = O * O;
+	//int ifmap_size = I * I;
+	//int ofmap_size = O * O;
 
-	for (int m = 0; m < MAX_F; m++)
-		for (int j = 0; j < MAX_WIDTH; j++)
-			for (int i = 0; i < MAX_WIDTH; i++)
+	for (int j = 0; j < MAX_WIDTH; j++)
+		for (int i = 0; i < MAX_WIDTH; i++)
+			for (int m = 0; m < MAX_F; m++)
+#pragma HLS UNROLL
 				output[m][j][i] = 0;
 
 	for (int x = 0; x < 32; x++){
@@ -206,7 +201,7 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 }
 
 void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX_F], const float sigma[MAX_F], const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I){
-	int ifmap_size = I * I;
+	//int ifmap_size = I * I;
 
 	fix k[64], h[64];
 #pragma HLS ARRAY_PARTITION variable=k complete
@@ -235,7 +230,6 @@ void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX
 #pragma HLS UNROLL						
 						if (m < M)
 						{
-							int index = x + y * 32 + m * 1024;
 							output[m][y][x] = ((input[m][y][x] * k[m] + h[m]).is_neg() ? 0 : 1); //do not use >0, use is_neg
 						}
 					}

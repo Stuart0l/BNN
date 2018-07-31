@@ -7,13 +7,13 @@
 
 using namespace std;
 
-void bnn(bit x[I_WIDTH1 * I_WIDTH1], bit output[O_WIDTH*O_WIDTH * 64]){
+void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 	bit mem_conv1[64][32][32] = {0};
-#pragma HLS ARRAY_PARTITION variable=mem_conv1 block factor=64
+#pragma HLS ARRAY_PARTITION variable=mem_conv1 complete dim=1
 	bit mem_conv2[64][32][32] = {0};
-#pragma HLS ARRAY_PARTITION variable=mem_conv2 block factor=64
-	fix mem_conv3[64][32][32] = { 0 };
-#pragma HLS ARRAY_PARTITION variable=mem_conv3 block factor=64
+#pragma HLS ARRAY_PARTITION variable=mem_conv2 complete dim=1
+	fix mem_conv3[64][32][32] = {0};
+#pragma HLS ARRAY_PARTITION variable=mem_conv3 complete dim=1
 
 
 	for (int i = 0; i < I_WIDTH1; i++)
