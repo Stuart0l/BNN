@@ -223,6 +223,7 @@ void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX
 		{
 			for (int y = 0; y < 32; y++)
 			{
+#pragma HLS PIPELINE rewind			
 				if (y < I)
 				{
 					loop_m:for (int m = 0; m < 64; m++)
