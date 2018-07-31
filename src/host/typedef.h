@@ -4,12 +4,10 @@
 #include<ap_int.h>
 #include<ap_fixed.h>
 
-#define NUMBER_OF_BITS 64
-#define NUMBER_OF_FRACTION_DIGITS 48
+#define NUMBER_OF_BITS 24
+#define NUMBER_OF_FRACTION_DIGITS 16
 
-typedef ap_uint<1> ubit;
 typedef ap_int<1> bit;
-typedef ap_int<8> bit8_t;
 typedef ap_fixed<NUMBER_OF_BITS,(NUMBER_OF_BITS-NUMBER_OF_FRACTION_DIGITS),AP_RND> fix;  //rounds to positive inf
 
 #ifdef OCL

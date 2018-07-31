@@ -17,7 +17,6 @@ const int FC2_UNITS = 512;
 const int MAX_W_FC = FC1_UNITS*FC2_UNITS;
 const int OUT = 10;
 
-extern "C" {
 void pad(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I);
 
 inline bool if_mac(int x, int y, int I);
@@ -32,5 +31,4 @@ void reshape(float* input, float* output);
 
 void dense(float* input, float*output, const float*weight, const float* bias, int M, int N, bool use_relu);
 
-}
 #endif
