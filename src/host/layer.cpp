@@ -4,7 +4,6 @@
 #include <iostream>
 
 using namespace std;
-extern "C"{
 
 void reshape(float* input, float* output) {
   for (int c = 0; c < 64; c++) {
@@ -36,4 +35,4 @@ void dense(float* input, float* output, const float* weight, const float* bias, 
   }
 
 }
-}
+

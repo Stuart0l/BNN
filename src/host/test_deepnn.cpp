@@ -135,10 +135,9 @@ int main(int argc, char ** argv){
         
         bnn_world.releaseWorld();
 
-    //#else
+    #else
       
-      //  BNN(input_image, output_image);
-
+        BNN(input_image, output_image);
 
     #endif
         

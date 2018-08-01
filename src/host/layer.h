@@ -19,20 +19,8 @@ const int OUT = 10;
 const fix con1 = sqrt(2.0/(F*F*1));//0.28284271;
 const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 
-extern "C" {
-void pad(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I);
-
-inline bool if_mac(int x, int y, int I);
-
-void conv_2d(bit input[MAX_FMAP], fix output[MAX_FMAP], const bit weight[MAX_W_CONV], int M, int N, int I, fix con);
-
-void max_pool(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I);
-
-void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], const fix miu[MAX_F], const float sigma[MAX_F]/*FLOAT*/, const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I);
-
 void reshape(float* input, float* output);
 
 void dense(float* input, float*output, const float*weight, const float* bias, int M, int N, bool use_relu);
 
-}
 #endif
