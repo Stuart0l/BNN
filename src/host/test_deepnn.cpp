@@ -70,7 +70,8 @@ int main(int argc, char ** argv){
     read_test_labels(test_labels);
     
     float correct = 0.0;
-    
+    long long total_elapsed=0;
+
     for (int test = 0; test<TEST_SIZE; test++) {
         
         bit8_t input_image[I_WIDTH1*I_WIDTH1];
@@ -141,7 +142,11 @@ int main(int argc, char ** argv){
 
     #endif
         
-	
+    // print time
+    long long elapsed = (end.tv_sec - start.tv_sec) * 1000000LL + end.tv_usec - start.tv_usec;
+    total_elapsed += elapsed/TEST_SIZE;
+    std::cout<<"elapsed time: "<<elapsed<<" us\n";
+        
     for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++)
         output_image_f[i] = -output_image[i];
 	
@@ -157,6 +162,9 @@ int main(int argc, char ** argv){
       std::cout <<"TEST "<< test << " result: " << max_id << " expected: " << test_labels[test] << std::endl;
 
 }
+    
+    std::cout <<"average time of operation: "<<total_elapsed<<std::endl;
+
     std::cout <<"correct: "<< correct << " test size: " << TEST_SIZE << " correct percentage: " << correct/TEST_SIZE << std::endl;
         //delete []output_image;
 
