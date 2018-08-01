@@ -16,6 +16,8 @@ const int FC1_UNITS = O_WIDTH*O_WIDTH * 64; //num of fc1 input units
 const int FC2_UNITS = 512;
 const int MAX_W_FC = FC1_UNITS*FC2_UNITS;
 const int OUT = 10;
+const fix con1 = 0.28284271;
+const fix con2 = 0.05;
 
 extern "C" {
 void pad(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I);

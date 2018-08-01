@@ -221,7 +221,6 @@ void BNN(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 
   pad(mem_conv2, mem_conv1, 1, I_WIDTH1);
     
-  fix con1 = 0.28284271;        //hardcoded temporarily
   conv_2d(mem_conv1, mem_conv3, w_conv1, 1, 32, 32, con1);
  
   batch_norm(mem_conv3, mem_conv1, miu1, sigma1, gamma1, beta1, 32, I_WIDTH1);
@@ -232,7 +231,6 @@ void BNN(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 
   pad(mem_conv2, mem_conv1, 32, I_WIDTH2);
 
-  fix con2 = 0.05;
   conv_2d(mem_conv1, mem_conv3, w_conv2, 32, 64, 18, con2);
 
   batch_norm(mem_conv3, mem_conv1, miu2, sigma2, gamma2, beta2, 64, I_WIDTH2);
