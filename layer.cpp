@@ -133,9 +133,9 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 			{
 				for (int r = 0; r < F; r++)
 				{
-					for (int x = 0; x < 28 || x < O; x++)
+					for (int x = 0; x < 28; x++)
 					{
-						loop_y:for (int y = 0; y < 28 || y < O; y++)
+						loop_y:for (int y = 0; y < 28; y++)
 						{
 #pragma HLS PIPELINE
 							if (if_mac(x + c, y + r, I))
