@@ -188,8 +188,8 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 						bit max = 0;
 						for (int c = 0; c < 2; c++){
 							for (int r = 0; r < 2; r++){
-								if (input[m][2 * y + r][2 * x])
-									max = input[m][2 * y + r][2 * x]; //
+								if (input[m][2 * y + r][2 * x + c])
+									max = input[m][2 * y + r][2 * x + c]; //
 							}
 						}
 						output[m][y][x] = max;
