@@ -45,11 +45,11 @@ inline bool if_mac(int x, int y, int I)
 	return true;
 }
 
-inline void load_weight(int n, int m, int N, bit w_buff[64][5][5], const bit w[MAX_W_CONV])
+inline void load_weight(int n, int m, int N, bit w_buff[128][5][5], const bit w[MAX_W_CONV])
 {
 	for (int wm = 0; wm < 8; wm++)
 	{
-		for (int wn = 0; wn < 8; wn++)
+		for (int wn = 0; wn < 16; wn++)
 		{
 			for (int i = 0; i < F; i++)
 			{
@@ -57,7 +57,7 @@ inline void load_weight(int n, int m, int N, bit w_buff[64][5][5], const bit w[M
 				{
 #pragma HLS PIPELINE rewind				
 					int w_index = i + j * F + (n + wn + (m + wm) * N) * FILTER_SIZE;
-					w_buff[wm*8+wn][j][i] = w[w_index];
+					w_buff[wm*16+wn][j][i] = w[w_index];
 				}
 			}
 		}
@@ -80,14 +80,14 @@ inline void load_ifmap(int m, bit i_buff[8][32][32], bit in[64][32][32])
 	}
 }
 
-inline void store_ofmap(int n, fix o_buff[8][32][32], fix out[64][32][32])
+inline void store_ofmap(int n, fix o_buff[16][32][32], fix out[64][32][32])
 {
 	for (int i = 0; i < 32; i++)
 	{
 		for (int j = 0; j < 32; j++)
 		{
 #pragma HLS PIPELINE rewind
-			for (int fn = 0; fn < 8; fn++)
+			for (int fn = 0; fn < 16; fn++)
 			{
 				out[n + fn][j][i] = o_buff[fn][j][i];
 				o_buff[fn][j][i] = 0.;
@@ -106,9 +106,9 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 {
 	bit input_buffer[8][32][32];
 #pragma HLS ARRAY_PARTITION variable=input_buffer complete dim=1
-	fix output_buffer[8][32][32];
+	fix output_buffer[16][32][32];
 #pragma HLS ARRAY_PARTITION variable=output_buffer complete dim=1
-	bit weight_buffer[64][5][5];
+	bit weight_buffer[128][5][5];
 #pragma HLS ARRAY_PARTITION variable=weight_buffer complete dim=1
 	int O = I - F + 1;
 	//int ifmap_size = I * I;
@@ -117,13 +117,13 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 	for (int i = 0; i < 32; i++)
 		for (int j = 0; j < 32; j++)
 #pragma HLS PIPELINE rewind		
-			for (int n = 0; n < 8; n++)
+			for (int n = 0; n < 16; n++)
 				output_buffer[n][i][j] = 0;
 
 	float var_w = 2. / (F*F * M);
 	fix con = hls::sqrt(var_w);
 			
-	for (int n = 0; n < N; n += 8)
+	for (int n = 0; n < N; n += 16)
 	{
 		for (int m = 0; m < M; m += 8)
 		{
@@ -137,11 +137,11 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 					{
 						loop_y:for (int y = 0; y < 28 || y < O; y++)
 						{
-#pragma HLS PIPELINE rewind
+#pragma HLS PIPELINE
 							if (if_mac(x + c, y + r, I))
 							{
 							loop_nn:
-								for (int nn = 0; nn < 8; nn++)
+								for (int nn = 0; nn < 16; nn++)
 								{
 									fix tmp_out = 0;
 #pragma HLS UNROLL
@@ -153,7 +153,7 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 #pragma HLS UNROLL
 											if (mm + m < M)
 											{
-												tmp_out += ((input_buffer[mm][y + r][x + c] == weight_buffer[mm*8+nn][r][c]) ? con : con.getNeg()); //do not use -, use getNeg
+												tmp_out += ((input_buffer[mm][y + r][x + c] == weight_buffer[mm*16+nn][r][c]) ? con : con.getNeg()); //do not use -, use getNeg
 											}
 										}
 									}
