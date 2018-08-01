@@ -13,7 +13,7 @@
 
 
 using namespace std;
-const int TEST_SIZE = 1000;
+const int TEST_SIZE = 3;
 
 void read_test_images(int8_t** test_images) {
 	std::ifstream infile(TESTROUTE);
@@ -54,8 +54,8 @@ int main(){
 	
 	for (int test = 0; test < TEST_SIZE; test++) {
 
-		bit input_image[I_WIDTH1*I_WIDTH1];
-		bit output_image[O_WIDTH*O_WIDTH * 64] = { 0 };
+		bit8_t input_image[I_WIDTH1*I_WIDTH1];
+		bit8_t output_image[O_WIDTH*O_WIDTH * 64] = { 0 };
 		float output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
 		float layer1_out[512] = { 0 };
 		float reshape_image[3136] = {0};

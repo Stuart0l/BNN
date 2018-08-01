@@ -71,9 +71,9 @@ inline void load_ifmap(int m, bit i_buff[8][32][32], bit in[64][32][32])
 	{
 		for (int j = 0; j < 32; j++)
 		{
+#pragma HLS PIPELINE rewind		
 			for (int fm = 0; fm < 8; fm++)
 			{
-#pragma HLS UNROLL
 				i_buff[fm][j][i] = in[m + fm][j][i];
 			}
 		}
@@ -106,14 +106,19 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 {
 	bit input_buffer[8][32][32];
 #pragma HLS ARRAY_PARTITION variable=input_buffer complete dim=1
-	static fix output_buffer[8][32][32];
-#pragma HLS RESET variable=output_buffer
+	fix output_buffer[8][32][32];
 #pragma HLS ARRAY_PARTITION variable=output_buffer complete dim=1
 	bit weight_buffer[64][5][5];
 #pragma HLS ARRAY_PARTITION variable=weight_buffer complete dim=1
 	int O = I - F + 1;
 	//int ifmap_size = I * I;
 	//int ofmap_size = O * O;
+	
+	for (int i = 0; i < 32; i++)
+		for (int j = 0; j < 32; j++)
+#pragma HLS PIPELINE rewind		
+			for (int n = 0; n < 8; n++)
+				output_buffer[n][i][j] = 0;
 
 	float var_w = 2. / (F*F * M);
 	fix con = hls::sqrt(var_w);
@@ -122,18 +127,17 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 	{
 		for (int m = 0; m < M; m += 8)
 		{
-//#pragma HLS DATAFLOW		
 			load_weight(n, m, N, weight_buffer, weight);
 			load_ifmap(m, input_buffer, input);
 			for (int c = 0; c < F; c++)
 			{
 				for (int r = 0; r < F; r++)
 				{
-					for (int x = 0; x < O; x++)
+					for (int x = 0; x < 28 || x < O; x++)
 					{
-						for (int y = 0; y < O; y++)
+						loop_y:for (int y = 0; y < 28 || y < O; y++)
 						{
-#pragma HLS PIPELINE
+#pragma HLS PIPELINE rewind
 							if (if_mac(x + c, y + r, I))
 							{
 							loop_nn:
@@ -176,10 +180,10 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 #pragma HLS UNROLL
 				output[m][j][i] = 0;
 
-	for (int x = 0; x < 32; x++){
+	for (int x = 0; x < 16; x++){
 		if (x < O)
 		{
-			for (int y = 0; y < 32; y++){
+			for (int y = 0; y < 16; y++){
 				if (y < O)
 				{
 					for (int m = 0; m < 64; m++)
@@ -188,6 +192,7 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 						bit max = 0;
 						for (int c = 0; c < 2; c++){
 							for (int r = 0; r < 2; r++){
+#pragma HLS PIPELINE rewind							
 								if (input[m][2 * y + r][2 * x + c])
 									max = input[m][2 * y + r][2 * x + c]; //
 							}
