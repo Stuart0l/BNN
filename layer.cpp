@@ -2,7 +2,7 @@
 #include "typedef.h"
 #include <cmath>
 #include <iostream>
-#include <hls_math.h>
+//#include <hls_math.h>
 using namespace std;
 
 void pad(bit input[64][32][32], bit output[64][32][32], int M, int I) {
@@ -102,7 +102,7 @@ inline void store_ofmap(int n, fix o_buff[16][32][32], fix out[64][32][32])
 //              N - number of output fmaps
 //              I - width of input fmaps
 // @param[out] : output - output fmaps
-void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I)
+void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I, fix con)
 {
 	bit input_buffer[8][32][32];
 #pragma HLS ARRAY_PARTITION variable=input_buffer complete dim=1
@@ -120,8 +120,8 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 			for (int n = 0; n < 16; n++)
 				output_buffer[n][i][j] = 0;
 
-	float var_w = 2. / (F*F * M);
-	fix con = hls::sqrt(var_w);
+	/* float var_w = 2. / (F*F * M);
+	fix con = hls::sqrt(var_w); */
 			
 	for (int n = 0; n < N; n += 16)
 	{
@@ -205,14 +205,14 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 	}
 }
 
-void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX_F], const float sigma[MAX_F], const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I){
+void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F], const fix h[MAX_F], int M, int I){
 	//int ifmap_size = I * I;
 
-	fix k[64], h[64];
+/* 	fix k[64], h[64];
 #pragma HLS ARRAY_PARTITION variable=k complete
 #pragma HLS ARRAY_PARTITION variable=h complete
 
-	for (int m = 0; m < 64; m++){
+ 	for (int m = 0; m < 64; m++){
 #pragma HLS PIPELINE
 		if (m < M){
 			fix s = hls::sqrt(sigma[m] + 0.00001);
@@ -220,7 +220,7 @@ void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX
 			fix tmp_miu = miu[m];
 			h[m] = tmp_miu.getNeg() * gamma[m] / s + beta[m];
 		}
-	}
+	} */
 
 	for (int x = 0; x < 32; x++)
 	{
