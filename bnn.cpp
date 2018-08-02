@@ -8,6 +8,12 @@
 using namespace std;
 
 void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
+#pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
+#pragma HLS INTERFACE s_axilite port=x bundle=control
+#pragma HLS INTERFACE s_axilite port=output bundle=control
+#pragma HLS INTERFACE s_axilite port=return bundle=control
+
 	bit mem_conv1[64][32][32] = {0};
 #pragma HLS ARRAY_PARTITION variable=mem_conv1 complete dim=1
 	bit mem_conv2[64][32][32] = {0};
