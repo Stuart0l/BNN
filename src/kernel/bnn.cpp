@@ -161,9 +161,9 @@ void max_pool(bit input[MAX_FMAP], bit output[MAX_FMAP], int M, int I){
 
   for (int i = 0; i < MAX_FMAP; i++) output[i] = 0;
 
-  for (int m = 0; m < 64 || m<M ; m++){
-    for (int x = 0; x < 32 || x<O ; x++){
-      for (int y = 0; y < 32 || y<O ; y++){
+  for (int m = 0; m < 64 && m<M ; m++){
+    for (int x = 0; x < 32 && x<O ; x++){
+      for (int y = 0; y < 32 && y<O ; y++){
         int o_index = x + y * 32 + m * 1024;
         bit max = 0;
         for (int c = 0; c < 2; c++){
