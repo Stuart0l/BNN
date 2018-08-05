@@ -2,7 +2,6 @@
 #include "typedef.h"
 #include <cmath>
 #include <iostream>
-//#include <hls_math.h>
 using namespace std;
 
 void pad(bit input[64][32][32], bit output[64][32][32], int M, int I) {
@@ -80,16 +79,18 @@ inline void load_ifmap(int m, bit i_buff[8][32][32], bit in[64][32][32])
 	}
 }
 
-inline void store_ofmap(int n, fix o_buff[16][32][32], fix out[64][32][32])
+inline void store_ofmap(int n, fix o_buff[16][32][32], bit out[64][32][32], const fix k[MAX_F], const fix h[MAX_F])
 {
 	for (int i = 0; i < 32; i++)
 	{
 		for (int j = 0; j < 32; j++)
 		{
-#pragma HLS PIPELINE rewind
+//#pragma HLS PIPELINE rewind
 			for (int fn = 0; fn < 16; fn++)
 			{
-				out[n + fn][j][i] = o_buff[fn][j][i];
+#pragma HLS UNROLL
+				bit tmp = (o_buff[fn][j][i]*k[n + fn]+h[n + fn]).is_neg() ? 0 : 1;
+				out[n + fn][j][i] = tmp;
 				o_buff[fn][j][i] = 0.;
 			}
 		}
@@ -102,7 +103,7 @@ inline void store_ofmap(int n, fix o_buff[16][32][32], fix out[64][32][32])
 //              N - number of output fmaps
 //              I - width of input fmaps
 // @param[out] : output - output fmaps
-void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I, fix con)
+void conv_2d(bit input[64][32][32], bit output[64][32][32], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con)
 {
 	bit input_buffer[8][32][32];
 #pragma HLS ARRAY_PARTITION variable=input_buffer complete dim=1
@@ -116,8 +117,8 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 	
 	for (int i = 0; i < 32; i++)
 		for (int j = 0; j < 32; j++)
-#pragma HLS PIPELINE rewind		
 			for (int n = 0; n < 16; n++)
+#pragma HLS UNROLL
 				output_buffer[n][i][j] = 0;
 
 	/* float var_w = 2. / (F*F * M);
@@ -165,7 +166,7 @@ void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX
 				}
 			}
 		}
-		store_ofmap(n, output_buffer, output);
+		store_ofmap(n, output_buffer, output, k, h);
 	}
 }
 
@@ -192,9 +193,12 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 						bit max = 0;
 						for (int c = 0; c < 2; c++){
 							for (int r = 0; r < 2; r++){
-#pragma HLS PIPELINE rewind							
-								if (input[m][2 * y + r][2 * x + c])
-									max = input[m][2 * y + r][2 * x + c]; //
+#pragma HLS PIPELINE rewind
+								bit tmp;
+								if ((tmp = input[m][2 * y + r][2 * x + c]))
+								{
+									max = tmp;
+								}
 							}
 						}
 						output[m][y][x] = max;
@@ -205,10 +209,10 @@ void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I){
 	}
 }
 
-void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F], const fix h[MAX_F], int M, int I){
+/*void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F], const fix h[MAX_F], int M, int I){
 	//int ifmap_size = I * I;
 
-/* 	fix k[64], h[64];
+ 	fix k[64], h[64];
 #pragma HLS ARRAY_PARTITION variable=k complete
 #pragma HLS ARRAY_PARTITION variable=h complete
 
@@ -220,7 +224,7 @@ void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F
 			fix tmp_miu = miu[m];
 			h[m] = tmp_miu.getNeg() * gamma[m] / s + beta[m];
 		}
-	} */
+	}
 
 	for (int x = 0; x < 32; x++)
 	{
@@ -243,7 +247,7 @@ void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F
 			}
 		}
 	}
-}
+}*/
 
 void reshape(float* input, float* output) {
 	for (int c = 0; c < 64; c++) {

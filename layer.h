@@ -22,13 +22,13 @@ const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 
 void pad(bit input[64][32][32], bit output[64][32][32], int M, int I);
 
-void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I, fix con);
+//void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I, fix con);
+void conv_2d(bit input[64][32][32], bit output[64][32][32], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
 
 void max_pool(bit input[64][32][32], bit output[64][32][32], int M, int I);
 
 //void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix miu[MAX_F], const float sigma[MAX_F], const fix gamma[MAX_F], const fix beta[MAX_F], int M, int I);
-
-void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F], const fix h[MAX_F], int M, int I);
+//void batch_norm(fix input[64][32][32], bit output[64][32][32], const fix k[MAX_F], const fix h[MAX_F], int M, int I);
 
 void reshape(float* input, float* output);
 
