@@ -1,5 +1,4 @@
 #include "layer.h"
-#include "typedef.h"
 #include <cmath>
 #include <iostream>
 using namespace std;

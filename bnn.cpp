@@ -1,6 +1,4 @@
-#include "layer.h"
 #include "model_conv.h"
-#include "typedef.h"
 #include <fstream>
 #include <iostream>
 #include <iomanip>
