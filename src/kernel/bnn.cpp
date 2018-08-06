@@ -198,13 +198,11 @@ void batch_norm(fix input[MAX_FMAP], bit output[MAX_FMAP], const fix miu[MAX_F],
 
 extern "C"
 {
-    void BNN(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
+    void BNN(bit8_t x[O_WIDTH*O_WIDTH * 64]){
         
 
         #pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
-        #pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
         #pragma HLS INTERFACE s_axilite port=x bundle=control
-        #pragma HLS INTERFACE s_axilite port=output bundle=control
         #pragma HLS INTERFACE s_axilite port=return bundle=control
         
         

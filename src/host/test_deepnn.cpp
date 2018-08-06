@@ -74,15 +74,14 @@ int main(int argc, char ** argv){
 
     for (int test = 0; test<TEST_SIZE; test++) {
         
-        bit8_t input_image[I_WIDTH1*I_WIDTH1];
-       	bit8_t output_image[O_WIDTH*O_WIDTH * 64] = { 0 };
+        bit8_t io_image[O_WIDTH*O_WIDTH * 64] = { 0 };
         float output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
         float layer1_out[512] = { 0 };
         float reshape_image[3136] = {0};
         float out[10] = { 0 };
         
         for (int i = 0; i < 784; i++)
-            input_image[i] = test_images[test][i];
+            io_image[i] = test_images[test][i];
     
         
         struct timeval start, end;
@@ -100,8 +99,7 @@ int main(int argc, char ** argv){
         CLKernel BNN(bnn_world.getContext(), bnn_world.getProgram(), "BNN", bnn_world.getDevice());
         
         // create mem objects
-        CLMemObj input_mem ( (void*)input_image,  sizeof(bit8_t), I_WIDTH1*I_WIDTH1,     CL_MEM_READ_ONLY);
-        CLMemObj output_mem  ( (void*)output_image,   sizeof(bit8_t), O_WIDTH*O_WIDTH * 64,        CL_MEM_WRITE_ONLY);
+        CLMemObj input_mem ( (void*)io_image,  sizeof(bit8_t), O_WIDTH*O_WIDTH * 64,   CL_MEM_READ_WRITE);
         
         // start timer
         gettimeofday(&start, 0);
@@ -109,7 +107,6 @@ int main(int argc, char ** argv){
         // add them to the world
         // added in sequence, each of them can be referenced by an index
         bnn_world.addMemObj(input_mem);
-        bnn_world.addMemObj(output_mem);
         
         // set work size
         int global_size[3] = {1, 1, 1};
@@ -121,14 +118,13 @@ int main(int argc, char ** argv){
         bnn_world.addKernel(BNN);
         
         // set kernel arguments
-        bnn_world.setMemKernelArg(0, 0, 0);  //not sure about the numbers!!
-        bnn_world.setMemKernelArg(0, 1, 1);
+        bnn_world.setMemKernelArg(0, 0, 0);
         
         // run!
         bnn_world.runKernels();
         
         // read the data back
-        bnn_world.readMemObj(1);
+        bnn_world.readMemObj(0);
         
         // end timer
         gettimeofday(&end, 0);
@@ -137,7 +133,7 @@ int main(int argc, char ** argv){
 
     #else
       
-        BNN(input_image, output_image);
+        BNN(io_image);
 
     #endif
         
@@ -147,7 +143,7 @@ int main(int argc, char ** argv){
     std::cout<<"elapsed time: "<<elapsed<<" us\n";
         
     for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++)
-        output_image_f[i] = -output_image[i];
+        output_image_f[i] = -io_image[i];
 	
 	reshape(output_image_f, reshape_image);
     dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
