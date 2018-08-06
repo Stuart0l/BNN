@@ -32,7 +32,7 @@ const fix h1[MAX_F] = {
 };
 
 const bit w_conv2[MAX_W_CONV] = {
-    #include"data/weight_5b"
+    #include"../data/weight_5b"
 }; //binary weight
 
 /* const fix miu2[MAX_F] = {
