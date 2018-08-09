@@ -2,7 +2,7 @@
 KERNEL_NAME = BNN
 
 # Set host source and headers
-HOST_SRC_CPP = ./src/host/layer.cpp ./src/host/test_deepnn.cpp ./src/host/utils.cpp 
+HOST_SRC_CPP = ./src/host/layer.cpp ./src/host/test_bnn.cpp ./src/host/utils.cpp 
 HOST_SRC_H   = ./src/host/layer.h ./src/host/model_conv.h ./src/host/model_dense.h ./src/host/typedef.h ./src/host/utils.h
 DATA         = ./data/*
 
