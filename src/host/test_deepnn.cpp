@@ -8,7 +8,6 @@
 #include <sys/time.h>
 #include <getopt.h>
 #include "typedef.h"
-#include <cstdlib>
 #include "model_dense.h"
 #include "utils.h"
 

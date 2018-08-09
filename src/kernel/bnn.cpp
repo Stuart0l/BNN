@@ -1,3 +1,8 @@
+//==========================================================================
+// bnn.cpp
+//==========================================================================
+// @brief: A convolution kernel for BNN on digit recognition
+
 #include "../host/typedef.h"
 #include "../host/model_conv.h"
 #include <cstdio>
