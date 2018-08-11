@@ -16,7 +16,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 #pragma HLS ARRAY_PARTITION variable=h1 complete
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
-	bit mem1[64][28][28] = {0};
+	bit mem1[28][28] = {0};
 #pragma HLS ARRAY_PARTITION variable=mem1 complete dim=1
 	bit mem2[64][28][28] = {0};
 #pragma HLS ARRAY_PARTITION variable=mem2 complete dim=1
@@ -28,7 +28,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 		for (int j = 0; j < I_WIDTH1; j++){
 #pragma HLS PIPELINE
 			int i_index = i + j*I_WIDTH1;
-			mem1[0][j][i] = x[i_index];
+			mem1[j][i] = x[i_index];
 		}
 
 	conv_1(mem1, mem2, w_conv1, k1, h1, 1, 32, 32, con1);

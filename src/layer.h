@@ -23,7 +23,7 @@ const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 //void pad(bit input[64][32][32], bit output[64][32][32], int M, int I);
 
 //void conv_2d(bit input[64][32][32], fix output[64][32][32], const bit weight[MAX_W_CONV], int M, int N, int I, fix con);
-void conv_1(bit input[64][28][28], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
+void conv_1(bit input[28][28], bit output[32][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
 
 void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I);
 
