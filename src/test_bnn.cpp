@@ -65,7 +65,7 @@ int main(){
 			input_image[i] = test_images[test][i];
 
 		bnn(input_image, output_image);
-		for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = -output_image[i].to_int();
+		for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
 		reshape(output_image_f, reshape_image);
 		dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
 		dense(layer1_out, out, w_fc2, b_fc2, 512, 10, false);
