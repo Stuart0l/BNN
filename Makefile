@@ -1,4 +1,4 @@
-PLATFORM := zc706
+PLATFORM := zc702
 
 # Run Target:
 #   hw  - Compile for hardware

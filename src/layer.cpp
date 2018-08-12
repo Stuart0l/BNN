@@ -153,8 +153,8 @@ inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
 	for (int m = 0; m < 32; m++){
 		for (int c = 0; c < F; c++){
 			for (int r = 0; r < F; r++){
+#pragma HLS PIPELINE
 				for (int wn = 0; wn < 16; wn++){
-#pragma HLS PIPELINE rewind
 					int w_index = c + r * F + (n + wn + m * 64) * FILTER_SIZE;
 					w_buff[wn][r][c][m] = w[w_index];
 				}
