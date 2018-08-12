@@ -200,8 +200,8 @@ void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 			}
 			for (int n = 0; n < 64; n++){
 #pragma HLS UNROLL
-				int tmp = 2 * count[n] - 32 * mac_num;
-				output[n][y][x] = (tmp * con * k[n] + h[n]).is_neg() ? 0 : 1;
+				int tmp = (count[n] << 1) - (mac_num << 5);
+				output[n][y][x] = (tmp * k[n] + h[n]).is_neg() ? 0 : 1;
 				count[n] = 0;
 			}
 		}
