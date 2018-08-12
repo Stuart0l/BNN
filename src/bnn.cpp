@@ -1,9 +1,6 @@
 #include "model_conv.h"
 #include <fstream>
-#include <iostream>
 #include <iomanip>
-
-using namespace std;
 
 void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 #pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
@@ -35,7 +32,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 
 	max_pool(mem2, mem3, 32, I_WIDTH1);
 
-	conv_2(mem3, mem2, w_conv2, k2, h2, con2);
+	conv_2(mem3, mem2, w_conv2, k2, h2);
 
 	max_pool(mem2, mem3, 64, I_WIDTH2);
 

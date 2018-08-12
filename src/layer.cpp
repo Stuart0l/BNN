@@ -1,5 +1,4 @@
 #include "layer.h"
-#include <cmath>
 #include <iostream>
 using namespace std;
 
@@ -123,9 +122,7 @@ void max_pool(bit input[64][28][28], bit64_t output[14][14], int M, int I){
 
 	for (int j = 0; j < 14; j++)
 		for (int i = 0; i < 14; i++)
-			for (int m = 0; m < 2; m++)
-#pragma HLS UNROLL
-				output[m][j][i] = 0;
+			output[j][i] = 0;
 
 	for (int x = 0; x < 14; x++){
 		if (x < O){
@@ -152,57 +149,64 @@ void max_pool(bit input[64][28][28], bit64_t output[14][14], int M, int I){
 	}
 }
 
-void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], fix con){
+inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
+	for (int m = 0; m < 32; m++){
+		for (int c = 0; c < F; c++){
+			for (int r = 0; r < F; r++){
+				for (int wn = 0; wn < 16; wn++){
+#pragma HLS PIPELINE rewind
+					int w_index = c + r * F + (n + wn + m * 64) * FILTER_SIZE;
+					w_buff[wn][r][c][m] = w[w_index];
+				}
+			}
+		}
+	}
+}
+
+void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]){
 	bit32_t input_32[14][14];
 	for (int y = 0; y < 14; y++)
 		for (int x = 0; x < 14; x++)
 			input_32[y][x] = input[y][x](31,0);
 
-	bit32_t w_buff[64][5][5];
+	bit32_t w_buff[16][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=1
-	int count[64];
+	bit o_buff[16][28][28];
+#pragma HLS ARRAY_PARTITION variable=o_buff complete dim=1
+	int count[16];
 #pragma HLS ARRAY_PARTITION variable=count complete
-	for (int n = 0; n < 64; n++)
+	for (int n = 0; n < 16; n++)
 #pragma HLS UNROLL
 		count[n] = 0;
 
-	for (int m = 0; m < 32; m++){
-		for (int c = 0; c < F; c++){
-			for (int r = 0; r < F; r++){
-#pragma HLS PIPELINE
-				for (int n = 0; n < 64; n++){
-					int w_index = c + r * F + (n + m * 64) * FILTER_SIZE;
-					w_buff[n][r][c][m] = weight[w_index];
-				}
-			}
-		}
-	}
-
-	for (int x = 0; x < 14; x++){
-		for (int y = 0; y < 14; y++){
-			int mac_num = 0;
-			for (int c = 0; c < F; c++){
-				for (int r = 0; r < F; r++){
+	for (int n = 0; n < 64; n += 16){
+		ld_wt(n, w_buff, weight);
+		for (int x = 0; x < 14; x++){
+			for (int y = 0; y < 14; y++){
+				int mac_num = 0;
+				for (int c = 0; c < F; c++){
+					for (int r = 0; r < F; r++){
 #pragma HLS PIPELINE rewind
-					if (if_mac(x + c, y + r, 18)){
-						mac_num++;
-						for (int n = 0; n < 64; n++){
-							bit32_t tmp = w_buff[n][r][c] ^ input_32[y + r - PADDING / 2][x + c - PADDING / 2];
-							int tmp_count = 0;
-							for (int i = 0; i < 32; i++){
-								if (tmp[i] == 0)
-									tmp_count += 1;
+						if (if_mac(x + c, y + r, 18)){
+							mac_num++;
+							for (int nn = 0; nn < 16; nn++){
+								bit32_t tmp = w_buff[nn][r][c] ^ input_32[y + r - PADDING / 2][x + c - PADDING / 2];
+								int tmp_count = 0;
+								for (int i = 0; i < 32; i++){
+									if (tmp[i] == 0)
+										tmp_count += 1;
+								}
+								count[nn] += tmp_count;
 							}
-							count[n] += tmp_count;
 						}
 					}
 				}
-			}
-			for (int n = 0; n < 64; n++){
+				for (int nn = 0; nn < 16; nn++){
 #pragma HLS UNROLL
-				int tmp = (count[n] << 1) - (mac_num << 5);
-				output[n][y][x] = (tmp * k[n] + h[n]).is_neg() ? 0 : 1;
-				count[n] = 0;
+					int tmp = (count[nn] << 1) - (mac_num << 5);
+					output[n + nn][y][x] = (tmp * k[nn] + h[nn]).is_neg() ? 0 : 1;
+					count[nn] = 0;
+				}
 			}
 		}
 	}

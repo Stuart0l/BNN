@@ -24,7 +24,7 @@ void conv_1(bit input[28][28], bit output[32][28][28], const bit weight[MAX_W_CO
 
 void max_pool(bit input[64][28][28], bit64_t output[14][14], int M, int I);
 
-void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], fix con);
+void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]);
 
 void reshape(float* input, float* output);
 
