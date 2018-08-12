@@ -68,8 +68,6 @@ inline void store_ofmap(fix o_buff[32][28][28], bit out[32][28][28], const fix k
 // @param[out] : output - output fmaps
 void conv_1(bit input[28][28], bit output[32][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con)
 {
-/* 	bit input_buffer[8][28][28];
-#pragma HLS ARRAY_PARTITION variable = input_buffer complete dim = 1 */
 	fix output_buffer[32][28][28];
 #pragma HLS ARRAY_PARTITION variable = output_buffer complete dim = 1
 	fix calc_buffer[32];
@@ -120,7 +118,7 @@ x:
 	store_ofmap(output_buffer, output, k, h);
 }
 
-void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I){
+void max_pool(bit input[64][28][28], bit64_t output[14][14], int M, int I){
 	int O = I / 2;
 
 	for (int j = 0; j < 14; j++)
@@ -134,7 +132,6 @@ void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I){
 			for (int y = 0; y < 14; y++){
 				if (y < O){
 					for (int m = 0; m < 64; m++){
-#pragma HLS UNROLL factor=2
 						if (m < M){
 							bit max = 0;
 							for (int c = 0; c < 2; c++){
@@ -146,7 +143,7 @@ void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I){
 									}
 								}
 							}
-							output[m / 32][y][x][m % 32] = max;
+							output[y][x][m] = max;
 						}
 					}
 				}
@@ -155,7 +152,12 @@ void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I){
 	}
 }
 
-void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], fix con){
+void conv_2(bit64_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], fix con){
+	bit32_t input_32[14][14];
+	for (int y = 0; y < 14; y++)
+		for (int x = 0; x < 14; x++)
+			input_32[y][x] = input[y][x](31,0);
+
 	bit32_t w_buff[64][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=1
 	int count[64];
@@ -185,7 +187,7 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 					if (if_mac(x + c, y + r, 18)){
 						mac_num++;
 						for (int n = 0; n < 64; n++){
-							bit32_t tmp = w_buff[n][r][c] ^ input[y + r - PADDING / 2][x + c - PADDING / 2];
+							bit32_t tmp = w_buff[n][r][c] ^ input_32[y + r - PADDING / 2][x + c - PADDING / 2];
 							int tmp_count = 0;
 							for (int i = 0; i < 32; i++){
 								if (tmp[i] == 0)

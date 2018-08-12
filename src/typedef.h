@@ -10,6 +10,7 @@
 typedef ap_int<1> bit;
 typedef ap_int<8> bit8_t;
 typedef ap_int<32> bit32_t;
+typedef ap_int<64> bit64_t;
 typedef ap_fixed<NUMBER_OF_BITS, (NUMBER_OF_BITS - NUMBER_OF_FRACTION_DIGITS), AP_RND> fix;
 
 #endif

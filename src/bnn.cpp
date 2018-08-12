@@ -20,7 +20,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 #pragma HLS ARRAY_PARTITION variable=mem1 complete dim=1
 	bit mem2[64][28][28] = {0};
 #pragma HLS ARRAY_PARTITION variable=mem2 complete dim=1
-	bit32_t mem3[2][14][14];
+	bit64_t mem3[14][14];
 #pragma HLS ARRAY_PARTITION variable=mem3 complete dim=1
 
 
@@ -35,7 +35,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 
 	max_pool(mem2, mem3, 32, I_WIDTH1);
 
-	conv_2(mem3[0], mem2, w_conv2, k2, h2, con2);
+	conv_2(mem3, mem2, w_conv2, k2, h2, con2);
 
 	max_pool(mem2, mem3, 64, I_WIDTH2);
 
@@ -44,6 +44,6 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 			for (int j = 0; j < O_WIDTH; j++){
 #pragma HLS PIPELINE
 				int o_index = i + j * O_WIDTH + m * O_WIDTH*O_WIDTH;
-				output[o_index] = mem3[m / 32][j][i][m % 32];
+				output[o_index] = mem3[j][i][m];
 			}
 }
