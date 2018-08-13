@@ -28,7 +28,6 @@ BUILD_DIR := build/$(PLATFORM)_$(TARGET_OS)_$(TARGET)
 SRC_DIR := src
 OBJECTS += \
 $(pwd)/$(BUILD_DIR)/bnn.o \
-$(pwd)/$(BUILD_DIR)/layer.o \
 $(pwd)/$(BUILD_DIR)/test_bnn.o
 
 HW_FLAGS := -sds-hw bnn bnn.cpp -sds-end
