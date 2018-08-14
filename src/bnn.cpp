@@ -203,7 +203,7 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 				for (int nn = 0; nn < 16; nn++){
 #pragma HLS UNROLL
 					int tmp = (count[nn] << 1) - (mac_num << 5);
-					output[n + nn][y][x] = (tmp * k[nn] + h[nn]).is_neg() ? 0 : 1;
+					output[n + nn][y][x] = (tmp * k[n + nn] + h[n + nn]).is_neg() ? 0 : 1;
 					count[nn] = 0;
 				}
 			}
