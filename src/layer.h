@@ -26,7 +26,7 @@ void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I);
 
 void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]);
 
-void reshape(char* input, float* output);
+void reshape(int* input, float* output);
 
 void dense(float* input, float*output, const float*weight, const float* bias, int M, int N, bool use_relu);
 

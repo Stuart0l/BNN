@@ -3,19 +3,19 @@
 #include <cstdlib>
 #include "bnn.h"
 #include "model_dense.h"
-//#include "../sds_utils/sds_utils.h"
+#include "../sds_utils/sds_utils.h"
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
 #else
-#define TESTROUTE "/home/xl722/BNN/data/test_b.dat"
-#define LABELROUTE "/home/xl722/BNN/data/label.dat"
+#define TESTROUTE "data/test_b.dat"
+#define LABELROUTE "data/label.dat"
 #endif // WIN32
 
 using namespace std;
-const int TEST_SIZE = 50; 
+const int TEST_SIZE = 500; 
 
-void reshape(char* input, float* output) {
+void reshape(int* input, float* output) {
 	for (int c = 0; c < 64; c++) {
 		for (int y = 0; y < 7; y++) {
 			for (int x = 0; x < 7; x++) {
@@ -85,28 +85,30 @@ int main(){
 
 	bit8_t input_image[I_WIDTH1*I_WIDTH1];
 	bit8_t output_image[O_WIDTH*O_WIDTH * 64] = { 0 };
-	float output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
+	int output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
 	float layer1_out[512] = { 0 };
 	float reshape_image[3136] = {0};
 	float out[10] = { 0 };
 
-	//sds_utils::perf_counter hw_ctr;
+	sds_utils::perf_counter hw_ctr;
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 		
-		for (int i = 0; i < 784; i++)
+		for (int i = 0; i < 784; i++){
 			input_image[i] = test_images[test][i];
+		}
 
-		//hw_ctr.start();
+
+		hw_ctr.start();
 
 		bnn(input_image, output_image);
-		//for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
-		reshape(output_image, reshape_image);
+		hw_ctr.stop();
+		for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
+		reshape(output_image_f, reshape_image);
 		dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
 		dense(layer1_out, out, w_fc2, b_fc2, 512, 10, false);
 
-		//hw_ctr.stop();
-
+		
 		int max_id = 0;
 		for(int i = 1; i < 10; i++)
 			if(out[i] > out[max_id])
@@ -115,7 +117,7 @@ int main(){
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}
 	cout << correct/TEST_SIZE << endl;
-	//cout << "avg cpu cycles: " << hw_ctr.avg_cpu_cycles() << endl;
+	cout << "avg cpu cycles: " << hw_ctr.avg_cpu_cycles() << endl;
 	
 	return 0;
 }

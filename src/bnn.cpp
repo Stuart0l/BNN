@@ -212,11 +212,6 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 }
 
 void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
-#pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
-#pragma HLS INTERFACE s_axilite port=x bundle=control
-#pragma HLS INTERFACE s_axilite port=output bundle=control
-#pragma HLS INTERFACE s_axilite port=return bundle=control
 
 #pragma HLS ARRAY_PARTITION variable=k1 complete
 #pragma HLS ARRAY_PARTITION variable=h1 complete
@@ -233,8 +228,8 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 	for (int i = 0; i < I_WIDTH1; i++)
 		for (int j = 0; j < I_WIDTH1; j++){
 #pragma HLS PIPELINE
-			int i_index = i + j*I_WIDTH1;
-			mem1[j][i] = x[i_index];
+			int i_index = j + i*I_WIDTH1;
+			mem1[i][j] = x[i_index];
 		}
 
 	conv_1(mem1, mem2, w_conv1, k1, h1, 1, 32, 32, con1);
@@ -249,7 +244,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 		for (int i = 0; i < O_WIDTH; i++)
 			for (int j = 0; j < O_WIDTH; j++){
 #pragma HLS PIPELINE
-				int o_index = i + j * O_WIDTH + m * O_WIDTH*O_WIDTH;
-				output[o_index] = mem3[m / 32][j][i][m % 32];
+				int o_index = j + i * O_WIDTH + m * O_WIDTH*O_WIDTH;
+				output[o_index] = mem3[m / 32][i][j][m % 32];
 			}
 }
