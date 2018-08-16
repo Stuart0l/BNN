@@ -3,7 +3,7 @@
 #include <cstdlib>
 #include "bnn.h"
 #include "model_dense.h"
-#include "../sds_utils/sds_utils.h"
+#include "timer.h"
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
@@ -90,7 +90,8 @@ int main(){
 	float reshape_image[3136] = {0};
 	float out[10] = { 0 };
 
-	sds_utils::perf_counter hw_ctr;
+	Timer timer("conv timer");
+	Timer timer_("bnn timer");
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 		
@@ -98,11 +99,13 @@ int main(){
 			input_image[i] = test_images[test][i];
 		}
 
-
-		hw_ctr.start();
+		timer_.start();
+		timer.start();
 
 		bnn(input_image, output_image);
-		hw_ctr.stop();
+		
+		timer.stop();
+
 		for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
 		reshape(output_image_f, reshape_image);
 		dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
@@ -113,6 +116,7 @@ int main(){
 		for(int i = 1; i < 10; i++)
 			if(out[i] > out[max_id])
 				max_id = i;
+		timer_.stop()
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}
