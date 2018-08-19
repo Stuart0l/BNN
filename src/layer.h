@@ -20,11 +20,11 @@ const int OUT = 10;
 const fix con1 = sqrt(2.0/(F*F*1));//0.28284271;
 const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 
-void conv_1(bit input[28][28], bit output[32][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
+void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
 
-void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I);
+void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I);
 
-void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]);
+void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]);
 
 void reshape(int* input, float* output);
 

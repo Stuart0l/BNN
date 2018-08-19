@@ -116,12 +116,11 @@ int main(){
 		for(int i = 1; i < 10; i++)
 			if(out[i] > out[max_id])
 				max_id = i;
-		timer_.stop()
+		timer_.stop();
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}
 	cout << correct/TEST_SIZE << endl;
-	cout << "avg cpu cycles: " << hw_ctr.avg_cpu_cycles() << endl;
 	
 	return 0;
 }

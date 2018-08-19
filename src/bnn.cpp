@@ -26,23 +26,7 @@ inline void load_weight(int N, bit w_buff[32][5][5], const bit w[MAX_W_CONV])
 	}
 }
 
-inline void load_ifmap(int m, bit i_buff[8][28][28], bit in[64][28][28])
-{
-
-	for (int i = 0; i < 28; i++)
-	{
-		for (int j = 0; j < 28; j++)
-		{
-#pragma HLS PIPELINE rewind
-			for (int fm = 0; fm < 8; fm++)
-			{
-				i_buff[fm][j][i] = in[m + fm][j][i];
-			}
-		}
-	}
-}
-
-inline void store_ofmap(fix o_buff[32][28][28], bit out[32][28][28], const fix k[MAX_F], const fix h[MAX_F])
+inline void store_ofmap(fix o_buff[32][28][28], bit64_t out[28][28], const fix k[MAX_F], const fix h[MAX_F])
 {
 	for (int i = 0; i < 28; i++)
 	{
@@ -52,8 +36,8 @@ inline void store_ofmap(fix o_buff[32][28][28], bit out[32][28][28], const fix k
 			for (int fn = 0; fn < 32; fn++)
 			{
 #pragma HLS UNROLL
-				bit tmp = (o_buff[fn][j][i]*k[fn]+h[fn]).is_neg() ? 0 : 1;
-				out[fn][j][i] = tmp;
+				fix tmp = o_buff[fn][j][i]*k[fn]+h[fn];
+				out[j][i][fn] = tmp.is_neg() ? 0 : 1;
 				o_buff[fn][j][i] = 0.;
 			}
 		}
@@ -66,7 +50,7 @@ inline void store_ofmap(fix o_buff[32][28][28], bit out[32][28][28], const fix k
 //              N - number of output fmaps
 //              I - width of input fmaps
 // @param[out] : output - output fmaps
-void conv_1(bit input[28][28], bit output[32][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con)
+void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con)
 {
 	fix output_buffer[32][28][28];
 #pragma HLS ARRAY_PARTITION variable = output_buffer complete dim = 1
@@ -118,34 +102,25 @@ x:
 	store_ofmap(output_buffer, output, k, h);
 }
 
-void max_pool(bit input[64][28][28], bit32_t output[2][14][14], int M, int I){
+void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	int O = I / 2;
 
 	for (int j = 0; j < 14; j++)
 		for (int i = 0; i < 14; i++)
-			for (int m = 0; m < 2; m++)
-				output[m][j][i] = 0;
+			output[j][i] = 0;
 
 	for (int x = 0; x < 14; x++){
 		if (x < O){
 			for (int y = 0; y < 14; y++){
 				if (y < O){
-					for (int m = 0; m < 64; m++){
-#pragma HLS UNROLL factor=2
-						if (m < M){
-							bit max = 0;
-							for (int c = 0; c < 2; c++){
-								for (int r = 0; r < 2; r++){
+					bit64_t max = 0;
+					for (int c = 0; c < 2; c++){
+						for (int r = 0; r < 2; r++){
 #pragma HLS PIPELINE rewind
-									bit tmp;
-									if ((tmp = input[m][2 * y + r][2 * x + c])){
-										max = tmp;
-									}
-								}
-							}
-							output[m / 32][y][x][m % 32] = max;
+							max = max | input[2 * y + r][2 * x + c];
 						}
 					}
+					output[y][x] = max;
 				}
 			}
 		}
@@ -166,16 +141,17 @@ inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
 	}
 }
 
-inline int popcount(uint32_t x){
+inline int popcount(unsigned int x){
+#pragma HLS INLINE
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
 	x = x + (x >> 8);
 	x = x + (x >> 16);
 	return x & 0x0000003f;
-}
+} //Hecker Popcount
 
-void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]){
+void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]){
 
 	bit32_t w_buff[16][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=1
@@ -208,7 +184,7 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 				for (int nn = 0; nn < 16; nn++){
 #pragma HLS UNROLL
 					int tmp = (count[nn] << 1) - (mac_num << 5);
-					output[n + nn][y][x] = (tmp * k[n + nn] + h[n + nn]).is_neg() ? 0 : 1;
+					output[y][x][n + nn] = (tmp * k[n + nn] + h[n + nn]).is_neg() ? 0 : 1;
 					count[nn] = 0;
 				}
 				mac_num = 0;
@@ -223,11 +199,9 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 #pragma HLS ARRAY_PARTITION variable=h1 complete
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
-	bit mem1[28][28] = {0};
-#pragma HLS ARRAY_PARTITION variable=mem1 complete dim=1
-	bit mem2[64][28][28] = {0};
-#pragma HLS ARRAY_PARTITION variable=mem2 complete dim=1
-	bit32_t mem3[2][14][14];
+	bit mem1[28][28];
+	bit64_t mem2[28][28];
+	bit64_t mem3[14][14];
 #pragma HLS ARRAY_PARTITION variable=mem3 complete dim=1
 
 
@@ -242,7 +216,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 
 	max_pool(mem2, mem3, 32, I_WIDTH1);
 
-	conv_2(mem3[0], mem2, w_conv2, k2, h2);
+	conv_2(mem3, mem2, w_conv2, k2, h2);
 
 	max_pool(mem2, mem3, 64, I_WIDTH2);
 
@@ -251,6 +225,6 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]){
 			for (int j = 0; j < O_WIDTH; j++){
 #pragma HLS PIPELINE
 				int o_index = j + i * O_WIDTH + m * O_WIDTH*O_WIDTH;
-				output[o_index] = mem3[m / 32][i][j][m % 32];
+				output[o_index] = mem3[i][j][m];
 			}
 }
