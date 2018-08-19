@@ -99,9 +99,9 @@ x:
 #pragma HLS PIPELINE rewind
 					if (if_mac(x + c, y + r, I)){
 						for (int n = 0; n < 32; n++){
-							fix tmp_out = 0;
+							fix tmp_out;
 							if (n < N){
-								tmp_out += ((input[y + r - PADDING / 2][x + c - PADDING / 2] == weight_buffer[n][r][c]) ? con : con.getNeg()); //do not use -, use getNeg
+								tmp_out = ((input[y + r - PADDING / 2][x + c - PADDING / 2] == weight_buffer[n][r][c]) ? con : con.getNeg()); //do not use -, use getNeg
 							}
 							calc_buffer[n] += tmp_out;
 						}
@@ -166,23 +166,33 @@ inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
 	}
 }
 
+inline int popcount(uint32_t x){
+	x = x - ((x >> 1) & 0x55555555);
+	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
+	x = (x + (x >> 4)) & 0x0f0f0f0f;
+	x = x + (x >> 8);
+	x = x + (x >> 16);
+	return x & 0x0000003f;
+}
+
 void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]){
 
 	bit32_t w_buff[16][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=1
-	bit o_buff[16][28][28];
+	bit o_buff[16][14][14];
 #pragma HLS ARRAY_PARTITION variable=o_buff complete dim=1
 	int count[16];
 #pragma HLS ARRAY_PARTITION variable=count complete
 	for (int n = 0; n < 16; n++)
 #pragma HLS UNROLL
 		count[n] = 0;
+	
+	int mac_num = 0;
 
 	for (int n = 0; n < 64; n += 16){
 		ld_wt(n, w_buff, weight);
 		for (int x = 0; x < 14; x++){
 			for (int y = 0; y < 14; y++){
-				int mac_num = 0;
 				for (int c = 0; c < F; c++){
 					for (int r = 0; r < F; r++){
 #pragma HLS PIPELINE rewind
@@ -190,12 +200,7 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 							mac_num++;
 							for (int nn = 0; nn < 16; nn++){
 								bit32_t tmp = w_buff[nn][r][c] ^ input[y + r - PADDING / 2][x + c - PADDING / 2];
-								int tmp_count = 0;
-								for (int i = 0; i < 32; i++){
-									if (tmp[i] == 0)
-										tmp_count += 1;
-								}
-								count[nn] += tmp_count;
+								count[nn] += (32 - popcount(tmp.to_uint()));
 							}
 						}
 					}
@@ -206,6 +211,7 @@ void conv_2(bit32_t input[14][14], bit output[64][28][28], const bit weight[MAX_
 					output[n + nn][y][x] = (tmp * k[n + nn] + h[n + nn]).is_neg() ? 0 : 1;
 					count[nn] = 0;
 				}
+				mac_num = 0;
 			}
 		}
 	}
