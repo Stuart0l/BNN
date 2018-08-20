@@ -5,6 +5,6 @@
 //#pragma SDS data zero_copy(x[0:784], output[0:3136])
 //#pragma SDS data mem_attribute(x:PHYSICAL_CONTIGUOUS, output:PHYSICAL_CONTIGUOUS)
 #pragma SDS data access_pattern(x:SEQUENTIAL, output:SEQUENTIAL)
-void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], bit8_t output[O_WIDTH*O_WIDTH * 64]);
+void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit8_t weight1[MAX_W_FC/8], bit8_t weight2[640]);
 
 #endif

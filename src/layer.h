@@ -19,6 +19,8 @@ const int MAX_W_FC = FC1_UNITS*FC2_UNITS;
 const int OUT = 10;
 const fix con1 = sqrt(2.0/(F*F*1));//0.28284271;
 const fix con2 = sqrt(2.0/(F*F*32));//0.05;
+const fix con_fc1 = sqrt(2.0/FC1_UNITS);
+const fix con_fc2 = sqrt(2.0/FC2_UNITS);
 
 void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
 

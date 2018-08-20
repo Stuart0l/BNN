@@ -2,20 +2,25 @@
 #include <fstream>
 #include <cstdlib>
 #include "bnn.h"
-#include "model_dense.h"
-#include "timer.h"
+//#include "timer.h"
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
+#define W_FC1_ROUTE "e:/Computer/HLS/BNN/data/weight_10bp"
 #else
 #define TESTROUTE "data/test_b.dat"
 #define LABELROUTE "data/label.dat"
+#define W_FC1_ROUTE "data/weight_10bp"
 #endif // WIN32
 
 using namespace std;
-const int TEST_SIZE = 500; 
+const int TEST_SIZE = 500;
 
-void reshape(int* input, float* output) {
+bit8_t w_fc2[FC2_UNITS*OUT/8] = {
+#include"../data/weight_12bp"
+};
+
+/* void reshape(int* input, float* output) {
 	for (int c = 0; c < 64; c++) {
 		for (int y = 0; y < 7; y++) {
 			for (int x = 0; x < 7; x++) {
@@ -34,7 +39,7 @@ void dense(float* input, float* output, const float* weight, const float* bias, 
 	for (int n = 0; n < N; n++){
 		float one_out = 0;
 		for (int m = 0; m < M; m++) {
-			int w_index = m * N + n;
+			int w_index = n * M + m;
 			//output[n] += input[m] * weight[w_index] * c;
 			one_out += (input[m] == weight[w_index]) ? 1 : 0; //XNOR
 		}
@@ -44,7 +49,7 @@ void dense(float* input, float* output, const float* weight, const float* bias, 
 		else output[n] = biased;
 	}
 
-}
+} */
 
 void read_test_images(int8_t** test_images) {
 	std::ifstream infile(TESTROUTE);
@@ -70,16 +75,30 @@ void read_test_labels(int test_labels[TEST_SIZE]) {
 	}
 }
 
+void read_fc1_weights(bit8_t* w_fc1) {
+	std::ifstream infile(W_FC1_ROUTE);
+	if (infile.is_open()) {
+		for (int index = 0; index < MAX_W_FC / 8; index++) {
+			int i;
+			infile >> i;
+			w_fc1[index] = i;
+		}
+		infile.close();
+	}
+}
+
 
 int main(){
 
 	int8_t** test_images;
+	bit8_t* w_fc1 = new bit8_t[MAX_W_FC / 8];
 	test_images = new int8_t*[TEST_SIZE];
 	for(int i = 0; i < TEST_SIZE; i++)
 		test_images[i] = new int8_t[784];
 	int test_labels[TEST_SIZE];
 	read_test_images(test_images);
 	read_test_labels(test_labels);
+	read_fc1_weights(w_fc1);
 
 	float correct = 0.0;
 
@@ -88,39 +107,43 @@ int main(){
 	int output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
 	float layer1_out[512] = { 0 };
 	float reshape_image[3136] = {0};
-	float out[10] = { 0 };
+	fixo out[10];
+	float result[10];
 
-	Timer timer("conv timer");
+	/* Timer timer("conv timer");
 	Timer timer_("bnn timer");
-
+ */
 	for (int test = 0; test < TEST_SIZE; test++) {
-		
+
 		for (int i = 0; i < 784; i++){
 			input_image[i] = test_images[test][i];
 		}
 
-		timer_.start();
-		timer.start();
+		/* timer_.start();
+		timer.start(); */
 
-		bnn(input_image, output_image);
-		
-		timer.stop();
+		bnn(input_image, out, w_fc1, w_fc2);
 
-		for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
+		for (int i = 0; i < 10; i++)
+			result[i] = out[i].to_float();
+
+		//timer.stop();
+
+		/* for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
 		reshape(output_image_f, reshape_image);
 		dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
-		dense(layer1_out, out, w_fc2, b_fc2, 512, 10, false);
+		dense(layer1_out, out, w_fc2, b_fc2, 512, 10, false); */
 
-		
 		int max_id = 0;
-		for(int i = 1; i < 10; i++)
-			if(out[i] > out[max_id])
+		for (int i = 1; i < 10; i++) {
+			if (result[i] > result[max_id])
 				max_id = i;
-		timer_.stop();
+		}
+		//timer_.stop();
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}
 	cout << correct/TEST_SIZE << endl;
-	
+
 	return 0;
 }
