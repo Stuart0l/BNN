@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "bnn.h"
-//#include "timer.h"
+#include "timer.h"
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
@@ -110,24 +110,24 @@ int main(){
 	fixo out[10];
 	float result[10];
 
-	/* Timer timer("conv timer");
+	Timer timer("conv timer");
 	Timer timer_("bnn timer");
- */
+
 	for (int test = 0; test < TEST_SIZE; test++) {
 
 		for (int i = 0; i < 784; i++){
 			input_image[i] = test_images[test][i];
 		}
 
-		/* timer_.start();
-		timer.start(); */
+		timer_.start();
+		timer.start();
 
 		bnn(input_image, out, w_fc1, w_fc2);
 
 		for (int i = 0; i < 10; i++)
 			result[i] = out[i].to_float();
 
-		//timer.stop();
+		timer.stop();
 
 		/* for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
 		reshape(output_image_f, reshape_image);
@@ -139,7 +139,7 @@ int main(){
 			if (result[i] > result[max_id])
 				max_id = i;
 		}
-		//timer_.stop();
+		timer_.stop();
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}

@@ -206,10 +206,11 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 }
 
 void ld_wt_fc1(int m, int n, bit8_t weight[MAX_W_FC/8], bit64_t w_buff[8]){
-	for (int i = 0; i < 8; i++){
+	int MN = (m << 3) + (n << 3) * 392;
+	for (int i = 0; i < 3136; i+=392){	
 		for (int j = 0; j < 8; j++){
 #pragma HLS PIPELINE
-			int w_index = (m << 3) + j + ((n << 3) + i) * 392;
+			int w_index = MN + j + i;
 			w_buff[i](((j + 1) << 3) - 1, j << 3) = weight[w_index];
 		}
 	}
