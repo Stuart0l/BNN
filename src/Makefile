@@ -63,7 +63,7 @@ DEPS := $(OBJECTS:.o=.d)
 all: ${EXECUTABLE}
 	#../setconfig.sh; \
 	cd sd_card; \
-	../../change_mac.sh ${MACADDRESS}; \
+	../change_mac.sh ${MACADDRESS}; \
   cp -r ../data .
 
 sw:

@@ -3,22 +3,17 @@
 #include <cstdlib>
 #include "bnn.h"
 #include "timer.h"
+#include "sds_lib.h"
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
-#define W_FC1_ROUTE "e:/Computer/HLS/BNN/data/weight_10bp"
 #else
 #define TESTROUTE "data/test_b.dat"
 #define LABELROUTE "data/label.dat"
-#define W_FC1_ROUTE "data/weight_10bp"
 #endif // WIN32
 
 using namespace std;
 const int TEST_SIZE = 500;
-
-bit8_t w_fc2[FC2_UNITS*OUT/8] = {
-#include"../data/weight_12bp"
-};
 
 /* void reshape(int* input, float* output) {
 	for (int c = 0; c < 64; c++) {
@@ -76,7 +71,7 @@ void read_test_labels(int test_labels[TEST_SIZE]) {
 }
 
 void read_fc1_weights(bit8_t* w_fc1) {
-	std::ifstream infile(W_FC1_ROUTE);
+	std::ifstream infile("data/weight_10bp");
 	if (infile.is_open()) {
 		for (int index = 0; index < MAX_W_FC / 8; index++) {
 			int i;
@@ -87,11 +82,23 @@ void read_fc1_weights(bit8_t* w_fc1) {
 	}
 }
 
+void read_fc2_weights(bit8_t* w_fc2) {
+	std::ifstream infile("data/weight_12bp");
+	if (infile.is_open()) {
+		for (int index = 0; index < 640; index++) {
+			int i;
+			infile >> i;
+			w_fc2[index] = i;
+		}
+		infile.close();
+	}
+}
 
 int main(){
 
 	int8_t** test_images;
-	bit8_t* w_fc1 = new bit8_t[MAX_W_FC / 8];
+	bit8_t* w_fc1 = (bit8_t*)sds_alloc(MAX_W_FC / 8 * sizeof(bit8_t));
+	bit8_t* w_fc2 = (bit8_t*)sds_alloc(640 * sizeof(bit8_t));
 	test_images = new int8_t*[TEST_SIZE];
 	for(int i = 0; i < TEST_SIZE; i++)
 		test_images[i] = new int8_t[784];
@@ -99,6 +106,7 @@ int main(){
 	read_test_images(test_images);
 	read_test_labels(test_labels);
 	read_fc1_weights(w_fc1);
+	read_fc2_weights(w_fc2);
 
 	float correct = 0.0;
 
