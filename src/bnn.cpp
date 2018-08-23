@@ -3,6 +3,17 @@
 #include "bnn.h"
 #include <fstream>
 #include <iomanip>
+const unsigned char __popcount_tab[] = {
+  0,1,1,2,1,2,2,3,1,2,2,3,2,3,3,4,1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,
+  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+  1,2,2,3,2,3,3,4,2,3,3,4,3,4,4,5,2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,
+  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+  2,3,3,4,3,4,4,5,3,4,4,5,4,5,5,6,3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,
+  3,4,4,5,4,5,5,6,4,5,5,6,5,6,6,7,4,5,5,6,5,6,6,7,5,6,6,7,6,7,7,8,
+};
+
 
 inline bool if_mac(int x, int y, int I)
 {
@@ -140,7 +151,7 @@ inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
 	}
 }
 
-inline int popcount(unsigned int x){
+/* inline int popcount(unsigned int x){
 #pragma HLS INLINE
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
@@ -159,6 +170,26 @@ inline int popcount(unsigned long long x){
 	x = x + (x >> 16);
 	x = x + (x >> 32);
     return x & 0x000000000000007F;
+} */
+
+inline int popcount(unsigned int x, const unsigned char pop_lut[256]){
+	return 
+	pop_lut[x & 0xff] + 
+	pop_lut[(x >> 8) & 0xff] + 
+	pop_lut[(x >> 16) & 0xff] + 
+	pop_lut[(x >> 24) & 0xff];
+}
+
+inline int popcount(unsigned long long x, const unsigned char pop_lut[256]){
+	return 
+	pop_lut[x & 0xff] + 
+	pop_lut[(x >> 8) & 0xff] + 
+	pop_lut[(x >> 16) & 0xff] + 
+	pop_lut[(x >> 24) & 0xff] + 
+	pop_lut[(x >> 32) & 0xff] + 
+	pop_lut[(x >> 40) & 0xff] +
+	pop_lut[(x >> 48) & 0xff] +
+	pop_lut[(x >> 56) & 0xff];
 }
 
 void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]){
@@ -186,7 +217,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 							mac_num++;
 							for (int nn = 0; nn < 16; nn++){
 								bit32_t tmp = w_buff[nn][r][c] ^ input[y + r - PADDING / 2][x + c - PADDING / 2];
-								count[nn] += (32 - popcount(tmp.to_uint()));
+								count[nn] += (32 - popcount(tmp.to_uint(), __popcount_tab));
 							}
 						}
 					}
@@ -228,7 +259,7 @@ void dense_1(bit64_t input[49], bit64_t output[8], bit8_t weight[MAX_W_FC/8], co
 			for (int mm = 0; mm < 7; mm++){
 #pragma HLS UNROLL
 				bit64_t tmp = w_buff[mm] ^ input[7*m+mm];
-				count += (64 - popcount(tmp.to_uint64()));
+				count += (64 - popcount(tmp.to_uint64(), __popcount_tab));
 			}
 			if (m == 6){
 				int calc_result = (count << 1) - FC1_UNITS;
@@ -259,7 +290,7 @@ void dense_2(bit64_t input[8], fixo output[10], bit8_t weight[640], const fix bi
 		for (int m = 0; m < 8; m++){
 #pragma HLS UNROLL
 			bit64_t tmp = w_buff[m] ^ input[m];
-			count += (64 - popcount(tmp.to_uint64()));
+			count += (64 - popcount(tmp.to_uint64(), __popcount_tab));
 		}
 		int calc_result = (count << 1) - FC2_UNITS;
 		output[n] = calc_result * con + bias[n];
