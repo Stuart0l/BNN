@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "bnn.h"
-#include "timer.h"
+//#include "timer.h"
 #ifdef __SDSCC__
 #include "sds_lib.h"
 #endif
@@ -41,11 +41,11 @@ void read_test_labels(int test_labels[TEST_SIZE]) {
 	}
 }
 
-void read_fc1_weights(bit8_t* w_fc1) {
-	std::ifstream infile("data/weight_10bp");
+void read_fc1_weights(bit64_t* w_fc1) {
+	std::ifstream infile("e:/Computer/HLS/BNN/data/weight_10bp");
 	if (infile.is_open()) {
-		for (int index = 0; index < MAX_W_FC / 8; index++) {
-			int i;
+		for (int index = 0; index < MAX_W_FC / 64; index++) {
+			unsigned long long i;
 			infile >> i;
 			w_fc1[index] = i;
 		}
@@ -53,11 +53,11 @@ void read_fc1_weights(bit8_t* w_fc1) {
 	}
 }
 
-void read_fc2_weights(bit8_t* w_fc2) {
-	std::ifstream infile("data/weight_12bp");
+void read_fc2_weights(bit64_t* w_fc2) {
+	std::ifstream infile("e:/Computer/HLS/BNN/data/weight_12bp");
 	if (infile.is_open()) {
-		for (int index = 0; index < 640; index++) {
-			int i;
+		for (int index = 0; index < 80; index++) {
+			unsigned long long i;
 			infile >> i;
 			w_fc2[index] = i;
 		}
@@ -69,11 +69,11 @@ int main(){
 
 	int8_t** test_images;
 	#ifdef __SDSCC__
-	bit8_t* w_fc1 = (bit8_t*)sds_alloc(MAX_W_FC / 8 * sizeof(bit8_t));
-	bit8_t* w_fc2 = (bit8_t*)sds_alloc(640 * sizeof(bit8_t));
+	bit64_t* w_fc1 = (bit64_t*)sds_alloc(MAX_W_FC / 64 * sizeof(bit8_t));
+	bit64_t* w_fc2 = (bit64_t*)sds_alloc(80 * sizeof(bit8_t));
 	#else
-	bit8_t* w_fc1 = new bit8_t[MAX_W_FC / 8];
-	bit8_t* w_fc2 = new bit8_t[640];
+	bit64_t* w_fc1 = new bit64_t[MAX_W_FC / 64];
+	bit64_t* w_fc2 = new bit64_t[80];
 	#endif
 	test_images = new int8_t*[TEST_SIZE];
 	for(int i = 0; i < TEST_SIZE; i++)
@@ -90,8 +90,8 @@ int main(){
 	fixo out[10];
 	float result[10];
 
-	Timer timer("conv timer");
-	Timer timer_("bnn timer");
+	/*Timer timer("conv timer");
+	Timer timer_("bnn timer");*/
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 
@@ -99,22 +99,22 @@ int main(){
 			input_image[i] = test_images[test][i];
 		}
 
-		timer_.start();
-		timer.start();
+		/*timer_.start();
+		timer.start();*/
 
 		bnn(input_image, out, w_fc1, w_fc2);
 
 		for (int i = 0; i < 10; i++)
 			result[i] = out[i].to_float();
 
-		timer.stop();
+		//timer.stop();
 
 		int max_id = 0;
 		for (int i = 1; i < 10; i++) {
 			if (result[i] > result[max_id])
 				max_id = i;
 		}
-		timer_.stop();
+		//timer_.stop();
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}

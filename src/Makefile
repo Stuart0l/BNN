@@ -53,7 +53,7 @@ CFLAGS = -Wall -O3 -c
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 LFLAGS = -O3
 
-MACADDRESS = 00:0a:35:00:1e:51
+MACADDRESS = 00:0A:35:00:01:25
 
 OBJECTS := $(APPSOURCES:.cpp=.o)
 DEPS := $(OBJECTS:.o=.d)
