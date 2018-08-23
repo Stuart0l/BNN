@@ -3,7 +3,9 @@
 #include <cstdlib>
 #include "bnn.h"
 #include "timer.h"
+#ifdef __SDSCC__
 #include "sds_lib.h"
+#endif
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
@@ -14,37 +16,6 @@
 
 using namespace std;
 const int TEST_SIZE = 500;
-
-/* void reshape(int* input, float* output) {
-	for (int c = 0; c < 64; c++) {
-		for (int y = 0; y < 7; y++) {
-			for (int x = 0; x < 7; x++) {
-				int o_index = c + (x + y * 7 ) * 64;
-				int i_index = x + y * 7 + c * 49;
-				output[o_index] = input[i_index];
-			}
-		}
-	}
-}
-
-void dense(float* input, float* output, const float* weight, const float* bias, int M, int N, bool use_relu){
-	float var_w = 2. / M;
-	float c = sqrt(var_w);
-
-	for (int n = 0; n < N; n++){
-		float one_out = 0;
-		for (int m = 0; m < M; m++) {
-			int w_index = n * M + m;
-			//output[n] += input[m] * weight[w_index] * c;
-			one_out += (input[m] == weight[w_index]) ? 1 : 0; //XNOR
-		}
-		output[n] = (2 * one_out - M)*c;
-		float biased = output[n] + bias[n];
-		if (use_relu) output[n] = (biased > 0) ? 1 : 0;
-		else output[n] = biased;
-	}
-
-} */
 
 void read_test_images(int8_t** test_images) {
 	std::ifstream infile(TESTROUTE);
@@ -97,8 +68,13 @@ void read_fc2_weights(bit8_t* w_fc2) {
 int main(){
 
 	int8_t** test_images;
+	#ifdef __SDSCC__
 	bit8_t* w_fc1 = (bit8_t*)sds_alloc(MAX_W_FC / 8 * sizeof(bit8_t));
 	bit8_t* w_fc2 = (bit8_t*)sds_alloc(640 * sizeof(bit8_t));
+	#else
+	bit8_t* w_fc1 = new bit8_t[MAX_W_FC / 8];
+	bit8_t* w_fc2 = new bit8_t[640];
+	#endif
 	test_images = new int8_t*[TEST_SIZE];
 	for(int i = 0; i < TEST_SIZE; i++)
 		test_images[i] = new int8_t[784];
@@ -111,10 +87,6 @@ int main(){
 	float correct = 0.0;
 
 	bit8_t input_image[I_WIDTH1*I_WIDTH1];
-	bit8_t output_image[O_WIDTH*O_WIDTH * 64] = { 0 };
-	int output_image_f[O_WIDTH*O_WIDTH * 64] = { 0 };
-	float layer1_out[512] = { 0 };
-	float reshape_image[3136] = {0};
 	fixo out[10];
 	float result[10];
 
@@ -136,11 +108,6 @@ int main(){
 			result[i] = out[i].to_float();
 
 		timer.stop();
-
-		/* for (int i = 0; i < O_WIDTH*O_WIDTH * 64; i++) output_image_f[i] = output_image[i].to_int(); //in this case, no need to add a "-"
-		reshape(output_image_f, reshape_image);
-		dense(reshape_image, layer1_out, w_fc1, b_fc1, O_WIDTH*O_WIDTH*64, 512, true);
-		dense(layer1_out, out, w_fc2, b_fc2, 512, 10, false); */
 
 		int max_id = 0;
 		for (int i = 1; i < 10; i++) {
