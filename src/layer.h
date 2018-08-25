@@ -22,14 +22,4 @@ const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 const fix con_fc1 = sqrt(2.0/FC1_UNITS);
 const fix con_fc2 = sqrt(2.0/FC2_UNITS);
 
-void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F], int M, int N, int I, fix con);
-
-void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I);
-
-void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV], const fix k[MAX_F], const fix h[MAX_F]);
-
-void reshape(int* input, float* output);
-
-void dense(float* input, float*output, const float*weight, const float* bias, int M, int N, bool use_relu);
-
 #endif

@@ -2,7 +2,7 @@
 #include <fstream>
 #include <cstdlib>
 #include "bnn.h"
-//#include "timer.h"
+#include "timer.h"
 #ifdef __SDSCC__
 #include "sds_lib.h"
 #endif
@@ -42,7 +42,7 @@ void read_test_labels(int test_labels[TEST_SIZE]) {
 }
 
 void read_fc1_weights(bit64_t* w_fc1) {
-	std::ifstream infile("e:/Computer/HLS/BNN/data/weight_10bp");
+	std::ifstream infile("data/weight_10bp");
 	if (infile.is_open()) {
 		for (int index = 0; index < MAX_W_FC / 64; index++) {
 			unsigned long long i;
@@ -54,7 +54,7 @@ void read_fc1_weights(bit64_t* w_fc1) {
 }
 
 void read_fc2_weights(bit64_t* w_fc2) {
-	std::ifstream infile("e:/Computer/HLS/BNN/data/weight_12bp");
+	std::ifstream infile("data/weight_12bp");
 	if (infile.is_open()) {
 		for (int index = 0; index < 80; index++) {
 			unsigned long long i;
@@ -90,8 +90,8 @@ int main(){
 	fixo out[10];
 	float result[10];
 
-	/*Timer timer("conv timer");
-	Timer timer_("bnn timer");*/
+	Timer timer("conv timer");
+	Timer timer_("bnn timer");
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 
@@ -99,22 +99,22 @@ int main(){
 			input_image[i] = test_images[test][i];
 		}
 
-		/*timer_.start();
-		timer.start();*/
+		timer_.start();
+		timer.start();
 
 		bnn(input_image, out, w_fc1, w_fc2);
 
 		for (int i = 0; i < 10; i++)
 			result[i] = out[i].to_float();
 
-		//timer.stop();
+		timer.stop();
 
 		int max_id = 0;
 		for (int i = 1; i < 10; i++) {
 			if (result[i] > result[max_id])
 				max_id = i;
 		}
-		//timer_.stop();
+		timer_.stop();
 		if (max_id == test_labels[test]) correct += 1.0;
 		cout << test << ": " << max_id << " " << test_labels[test] << endl;
 	}
