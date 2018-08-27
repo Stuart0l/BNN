@@ -69,8 +69,8 @@ int main(){
 
 	int8_t** test_images;
 	#ifdef __SDSCC__
-	bit64_t* w_fc1 = (bit64_t*)sds_alloc(MAX_W_FC / 64 * sizeof(bit8_t));
-	bit64_t* w_fc2 = (bit64_t*)sds_alloc(80 * sizeof(bit8_t));
+	bit64_t* w_fc1 = (bit64_t*)sds_alloc(MAX_W_FC / 64 * sizeof(bit64_t));
+	bit64_t* w_fc2 = (bit64_t*)sds_alloc(80 * sizeof(bit64_t));
 	#else
 	bit64_t* w_fc1 = new bit64_t[MAX_W_FC / 64];
 	bit64_t* w_fc2 = new bit64_t[80];

@@ -40,7 +40,7 @@ EXECUTABLE = bnn.elf
 
 HLSONLY = -mno-bitstream -mno-boot-files
 
-PLATFORM = zed
+PLATFORM = zc706
 SDSFLAGS = -sds-pf ${PLATFORM} \
 	-sds-hw bnn bnn.cpp -hls-tcl hls.tcl \
   -clkid 2 -sds-end \
@@ -53,7 +53,7 @@ CFLAGS = -Wall -O3 -c
 CFLAGS += -MMD -MP -MF"$(@:%.o=%.d)"
 LFLAGS = -O3
 
-MACADDRESS = 00:0A:35:00:01:25
+MACADDRESS = 00:0A:35:03:1B:B9
 
 OBJECTS := $(APPSOURCES:.cpp=.o)
 DEPS := $(OBJECTS:.o=.d)

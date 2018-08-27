@@ -256,8 +256,8 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 					}
 				}
 				for (int nn = 0; nn < 16; nn++){
-					int tmp = (count[nn] << 1) - (mac_num << 5);
-					output[y][x][n + nn] = (tmp * k2[n + nn] + h2[n + nn]).is_neg() ? 0 : 1;
+					int tmp = ((count[nn] << 1) - (mac_num << 5)) * k2[n + nn];
+					output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
 					count[nn] = 0;
 				}
 				mac_num = 0;
