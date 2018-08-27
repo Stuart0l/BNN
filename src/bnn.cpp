@@ -197,21 +197,19 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 
 	bit32_t w_buff[16][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=0
-	bit o_buff[16][14][14];
-#pragma HLS ARRAY_PARTITION variable=o_buff complete dim=1
 	bit32_t line_buff[F][I_WIDTH2];
 #pragma HLS ARRAY_PARTITION variable=line_buff complete dim=1
 	bit32_t window_buff[F][F];
 #pragma HLS ARRAY_PARTITION variable=window_buff complete dim=0
-	int count[16];
+	int count[8];
 #pragma HLS ARRAY_PARTITION variable=count complete
-	for (int n = 0; n < 16; n++)
+	for (int n = 0; n < 8; n++)
 #pragma HLS UNROLL
 		count[n] = 0;
 
 	int mac_num = 0;
 
-	for (int n = 0; n < 64; n += 16){
+	for (int n = 0; n < 64; n += 8){
 		ld_wt(n, w_buff, weight);
 		for (int j = 0; j < I_WIDTH2; j++)
 			for (int i = 0; i < 3; i++)
@@ -234,7 +232,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 					for (int r = 0; r < F; r++){
 						if (if_mac(x + c, y + r, 18)){
 							mac_num++;
-							for (int nn = 0; nn < 16; nn++){
+							for (int nn = 0; nn < 8; nn++){
 								bit32_t tmp = w_buff[nn][r][c] ^ window_buff[r][c];
 								count[nn] += (32 - popcount(tmp.to_uint()));
 							}
@@ -255,8 +253,8 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 							line_buff[4][x+3] = (y+3<14) ? input[y+3][x+3](31, 0) : (bit32_t)0;
 					}
 				}
-				for (int nn = 0; nn < 16; nn++){
-					int tmp = ((count[nn] << 1) - (mac_num << 5)) * k2[n + nn];
+				for (int nn = 0; nn < 8; nn++){
+					fix tmp = ((count[nn] << 1) - (mac_num << 5)) * k2[n + nn];
 					output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
 					count[nn] = 0;
 				}
