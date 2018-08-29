@@ -62,8 +62,8 @@ DEPS := $(OBJECTS:.o=.d)
 
 all: ${EXECUTABLE}
 	cd sd_card; \
-	../change_mac.sh ${MACADDRESS}; \
-  cp -r ../data .
+	../../change_mac.sh ${MACADDRESS}; \
+  cp -r ../../data .
 
 sw:
 	g++ -g -I/opt/Xilinx/Vivado/2018.1/include ${APPSOURCES} -o bnn_sw
