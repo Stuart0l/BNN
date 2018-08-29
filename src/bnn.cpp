@@ -62,12 +62,6 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 #pragma HLS ARRAY_PARTITION variable=window_buffer complete dim=0
 	int O = I - F + 1;
 
-	for (int i = 0; i < 28; i++)
-		for (int j = 0; j < 28; j++)
-			for (int n = 0; n < 32; n++)
-#pragma HLS UNROLL
-				output_buffer[n][i][j] = 0;
-
 	for (int n = 0; n < 32; n++)
 #pragma HLS UNROLL
 		calc_buffer[n] = 0;
@@ -132,6 +126,7 @@ x:
 	store_ofmap(output_buffer, output);
 }
 
+
 void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	int O = I / 2;
 
@@ -155,12 +150,12 @@ void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	}
 }
 
-inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
+inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit w[MAX_W_CONV]){
 	for (int m = 0; m < 32; m++){
 		for (int c = 0; c < F; c++){
 			for (int r = 0; r < F; r++){
 #pragma HLS PIPELINE
-				for (int wn = 0; wn < 16; wn++){
+				for (int wn = 0; wn < 8; wn++){
 					int w_index = c + r * F + (n + wn + m * 64) * FILTER_SIZE;
 					w_buff[wn][r][c][m] = w[w_index];
 				}
@@ -170,7 +165,6 @@ inline void ld_wt(int n, bit32_t w_buff[16][5][5], const bit w[MAX_W_CONV]){
 }
 
 inline int popcount(unsigned int x){
-#pragma HLS INLINE
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
@@ -180,7 +174,6 @@ inline int popcount(unsigned int x){
 } //Hecker Popcount
 
 inline int popcount(unsigned long long x){
-//#pragma HLS INLINE
 	x = x - (((x) >> 1) & 0x5555555555555555ULL);
     x = (x & 0x3333333333333333ULL) + (((x) >> 2) & 0x3333333333333333ULL);
     x = (x + ((x) >> 4)) & 0x0F0F0F0F0F0F0F0FULL;
@@ -195,7 +188,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
 
-	bit32_t w_buff[16][5][5];
+	bit32_t w_buff[8][5][5];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete dim=0
 	bit32_t line_buff[F][I_WIDTH2];
 #pragma HLS ARRAY_PARTITION variable=line_buff complete dim=1
@@ -309,42 +302,36 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 }
 #endif
 
-void ld_wt_fc1(int m, int n, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[8]){
-	int MN = n * 49 + m * 7;
-	if (m < 7){
-		for (int i = 0; i < 7; i++){
+void ld_wt_fc1(int n, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[49]){
+	for (int i = 0; i < 49; i++){
 #pragma HLS PIPELINE
-			int w_index = MN + i;
-			w_buff[i] = weight[w_index];
-		}
+		int w_index = n * 49 + i;
+		w_buff[i] = weight[w_index];
 	}
+	
 }
 
-void calc_1(int m, int n, bit64_t w_buff[7], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
-	int M = 7 * m;
-	for (int mm = 0; mm < 7; mm++){
+void calc_1(int n, bit64_t w_buff[49], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
+	for (int mm = 0; mm < 49; mm++){
 #pragma HLS UNROLL
-		bit64_t tmp = w_buff[mm] ^ input[M+mm];
+		bit64_t tmp = w_buff[mm] ^ input[mm];
 		*count += (64 - popcount(tmp.to_uint64()));
 	}
-	if (m == 6){
-		int calc_result = (*count << 1) - FC1_UNITS;
-		output[n >> 6][n & 63] = (calc_result * con + bias[n]).is_neg() ? 0 : 1;
-		*count = 0;
-	}
+	int calc_result = (*count << 1) - FC1_UNITS;
+	output[n >> 6][n & 63] = (calc_result * con + bias[n]).is_neg() ? 0 : 1;
+	*count = 0;
 }
 
 void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix bias[FC2_UNITS], const fix con){
 #pragma HLS INLINE off
-	bit64_t w_buff[7];
+	bit64_t w_buff[49];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
 	int count;
 
 	for (int n = 0; n < FC2_UNITS; n++){
-		for (int m = 0; m < 7; m++){
-			ld_wt_fc1(m, n, weight, w_buff);
-			calc_1(m, n, w_buff, input, output, &count, bias, con);
-		}
+			ld_wt_fc1(n, weight, w_buff);
+			calc_1(n, w_buff, input, output, &count, bias, con);
+		
 	}
 }
 
@@ -380,9 +367,8 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 	bit mem1[28][28];
 	bit64_t mem2[28][28];
 	bit64_t mem3[14][14];
-#pragma HLS ARRAY_PARTITION variable=mem3 complete dim=1
 	bit64_t memfc1[49];
-#pragma HLS ARRAY_PARTITION variable=memfc1 cyclic factor=7
+#pragma HLS ARRAY_PARTITION variable=memfc1 complete
 	bit64_t memfc2[8];
 #pragma HLS ARRAY_PARTITION variable=memfc2 complete
 
