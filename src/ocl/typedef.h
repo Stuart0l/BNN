@@ -3,6 +3,7 @@
 
 #include<ap_int.h>
 #include<ap_fixed.h>
+#include <string>
 
 #define NUMBER_OF_BITS 24
 #define NUMBER_OF_FRACTION_DIGITS 16
@@ -16,4 +17,5 @@ typedef ap_int<64> bit64_t;
 typedef ap_fixed<NUMBER_OF_BITS, (NUMBER_OF_BITS - NUMBER_OF_FRACTION_DIGITS), AP_RND> fix;
 typedef ap_fixed<NUMBER_OF_OBITS, (NUMBER_OF_OBITS - NUMBER_OF_OFRACTION_DIGITS), AP_RND> fixo;
 
+const std::string TARGET_DEVICE = "xilinx:aws-vu9p-f1:4ddr-xpr-2pr:4.0";
 #endif

@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <string>
 #include "bnn.h"
 #ifdef __SDSCC__
 	#include "sds_lib.h"
@@ -16,9 +17,9 @@
 	#define WFC1ROUTE "data/weight_10bp"
 	#define WFC2ROUTE "data/weight_12bp"
 	#include "timer.h"
-#endif // WIN32
+#endif
+#include "CLWorld.h"
 
-using namespace std;
 const int TEST_SIZE = 500;
 
 void read_test_images(int8_t** test_images) {
@@ -91,11 +92,32 @@ int main(){
 	float correct = 0.0;
 
 	bit8_t input_image[I_WIDTH1*I_WIDTH1];
-	fixo out[10];
-	float result[10];
+	fixo out[OUT];
+	float result[OUT];
 	#ifndef _WIN32
 		Timer timer_("bnn timer");
 	#endif
+
+	rosetta::CLWorld bnn_world(TARGET_DEVICE, CL_DEVICE_TYPE_ACCELERATOR);
+
+	std::string KernelFile;
+	bnn_world.addProgram(KernelFile);
+
+	rosetta::CLKernel Bnn(bnn_world.getContext(), bnn_world.getProgram(), "bnn", bnn_world.getDevice());
+	bnn_world.addKernel(Bnn);
+
+	rosetta::CLMemObj weightfc1((void*)w_fc1, sizeof(bit64_t), MAX_W_FC / 64, CL_MEM_READ_ONLY);
+	rosetta::CLMemObj weightfc2((void*)w_fc2, sizeof(bit64_t), 80, CL_MEM_READ_ONLY);
+	rosetta::CLMemObj inputMem((void*)input_image, sizeof(bit8_t), 784, CL_MEM_READ_ONLY);
+	rosetta::CLMemObj outMem((void*)out, sizeof(fixo), OUT, CL_MEM_WRITE_ONLY);
+
+	int global_size[3] = {1, 1, 1};
+	int local_size[3] = {1, 1, 1};
+	Bnn.set_global(global_size);
+	Bnn.set_local(local_size);
+
+	bnn_world.addMemObj(weightfc1);
+	bnn_world.addMemObj(weightfc2);
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 
@@ -106,7 +128,17 @@ int main(){
 			timer_.start();
 		#endif
 
-		bnn(input_image, out, w_fc1, w_fc2);
+		bnn_world.addMemObj(inputMem);
+		bnn_world.addMemObj(outMem);
+
+		bnn_world.setMemKernelArg(0, 0, 2*test+2);
+		bnn_world.setMemKernelArg(0, 1, 2*test+3);
+		bnn_world.setMemKernelArg(0, 2, 0);
+		bnn_world.setMemKernelArg(0, 3, 1);
+
+		bnn_world.runKernels();
+
+		bnn_world.readMemObj(2*test+3);
 
 		for (int i = 0; i < 10; i++)
 			result[i] = out[i].to_float();
@@ -120,9 +152,10 @@ int main(){
 			timer_.stop();
 		#endif
 		if (max_id == test_labels[test]) correct += 1.0;
-		cout << test << ": " << max_id << " " << test_labels[test] << endl;
+		std::cout << test << ": " << max_id << " " << test_labels[test] << std::endl;
 	}
-	cout << correct/TEST_SIZE << endl;
+	std::cout << correct/TEST_SIZE << std::endl;
+	bnn_world.releaseWorld();
 
 	return 0;
 }

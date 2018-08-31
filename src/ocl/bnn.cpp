@@ -1,6 +1,5 @@
 #include "model_conv.h"
 #include "model_dense.h"
-#include "bnn.h"
 #include <fstream>
 #include <iomanip>
 #define USE_LINEBUFFER
@@ -61,6 +60,7 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 #pragma HLS ARRAY_PARTITION variable=line_buffer complete dim=1
 	bit window_buffer[F][F];
 #pragma HLS ARRAY_PARTITION variable=window_buffer complete dim=0
+	int O = I - F + 1;
 
 	for (int n = 0; n < 32; n++)
 #pragma HLS UNROLL
@@ -165,7 +165,7 @@ inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit w[MAX_W_CONV]){
 }
 
 inline int popcount(unsigned int x){
-#pragma HLS INLINE
+#pragma HLS INLINE	
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
@@ -303,55 +303,35 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 }
 #endif
 
-void ld_wt_fc1(int* m1, int* n1, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[8]){
-	int m = *m1;
-	(*m1)++;
-	int n = *n1;
-	int MN = n * 49 + m * 7;
-	for (int i = 0; i < 7; i++){
+void ld_wt_fc1(int n, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[49]){
+	for (int i = 0; i < 49; i++){
 #pragma HLS PIPELINE
-		int w_index = MN + i;
+		int w_index = n * 49 + i;
 		w_buff[i] = weight[w_index];
 	}
-	if (m == 6) {
-		(*n1)++;
-		(*m1) = 0;
-	}
+	
 }
 
-void calc_1(int* m2, int* n2, bit64_t w_buff[7], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
-	int m = *m2;
-	(*m2)++;
-	int n = *n2;
-	int M = 7 * m;
-	for (int mm = 0; mm < 7; mm++){
+void calc_1(int n, bit64_t w_buff[49], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
+	for (int mm = 0; mm < 49; mm++){
 #pragma HLS UNROLL
-		bit64_t tmp = w_buff[mm] ^ input[M+mm];
+		bit64_t tmp = w_buff[mm] ^ input[mm];
 		*count += (64 - popcount(tmp.to_uint64()));
 	}
-	if (m == 6){
-		int calc_result = (*count << 1) - FC1_UNITS;
-		output[n >> 6][n & 63] = (calc_result * con + bias[n]).is_neg() ? 0 : 1;
-		*count = 0;
-		(*n2)++;
-		(*m2) = 0;
-	}
+	int calc_result = (*count << 1) - FC1_UNITS;
+	output[n >> 6][n & 63] = (calc_result * con + bias[n]).is_neg() ? 0 : 1;
+	*count = 0;
 }
 
 void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix bias[FC2_UNITS], const fix con){
 #pragma HLS INLINE off
-	bit64_t w_buff[7];
+	bit64_t w_buff[49];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
 	int count;
-	int m1, m2, n1, n2;
-	m1 = 0; m2 = 0; n1 = 0; n2 = 0;
 
 	for (int n = 0; n < FC2_UNITS; n++){
-		for (int m = 0; m < 7; m++){
-#pragma HLS DATAFLOW
-			ld_wt_fc1(&m1, &n1, weight, w_buff);
-			calc_1(&m2, &n2, w_buff, input, output, &count, bias, con);
-		}
+		ld_wt_fc1(n, weight, w_buff);
+		calc_1(n, w_buff, input, output, &count, bias, con);		
 	}
 }
 
@@ -382,8 +362,19 @@ void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix bi
 	}
 }
 
+#ifdef __cplusplus
+extern "C" {
+#endif
 void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_FC/64], bit64_t weight2[80]){
-
+#pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=weight1 offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=weight2 offset=slave bundle=gmem
+#pragma HLS INTERFACE s_axilite port=x bundle=control
+#pragma HLS INTERFACE s_axilite port=output bundle=control
+#pragma HLS INTERFACE s_axilite port=weight1 bundle=control
+#pragma HLS INTERFACE s_axilite port=weight2 bundle=control
+#pragma HLS INTERFACE s_axilite port=return bundle=control
 	bit mem1[28][28];
 	bit64_t mem2[28][28];
 	bit64_t mem3[14][14];
@@ -419,3 +410,6 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 	dense_2(memfc2, output, weight2, b_fc2, con_fc2);
 
 }
+#ifdef __cplusplus
+}
+#endif
