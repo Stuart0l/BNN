@@ -1,8 +1,10 @@
 #include <iostream>
 #include <fstream>
 #include <cstdlib>
+#include <getopt.h>
 #include <string>
 #include "bnn.h"
+#include "utils.h"
 #ifdef __SDSCC__
 	#include "sds_lib.h"
 #endif
@@ -70,7 +72,7 @@ void read_fc2_weights(bit64_t* w_fc2) {
 	}
 }
 
-int main(){
+int main(int argc, char** argv){
 
 	int8_t** test_images;
 	#ifdef __SDSCC__
@@ -101,6 +103,7 @@ int main(){
 	rosetta::CLWorld bnn_world(TARGET_DEVICE, CL_DEVICE_TYPE_ACCELERATOR);
 
 	std::string KernelFile;
+	parse_sdaccel_command_line_args(argc, argv, KernelFile);
 	bnn_world.addProgram(KernelFile);
 
 	rosetta::CLKernel Bnn(bnn_world.getContext(), bnn_world.getProgram(), "bnn", bnn_world.getDevice());

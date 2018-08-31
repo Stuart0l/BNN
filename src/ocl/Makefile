@@ -1,7 +1,7 @@
 KERNEL_NAME = bnn
 
-HOST_SRC_CPP = host.cpp
-HOST_SRC_H = bnn.h typedef.h timer.h
+HOST_SRC_CPP = host.cpp utils.cpp
+HOST_SRC_H = bnn.h typedef.h timer.h utils.h
 
 HOST_INC = -I$(XILINX_SDX)/Vivado_HLS/include
 HOST_LIB = -L$(XILINX_SDX)/Vivado_HLS/lib

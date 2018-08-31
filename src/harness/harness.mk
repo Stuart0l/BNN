@@ -19,8 +19,8 @@ SW_CXX = g++
 
 # Set Default OpenCL device and platform
 USR_PLATFORM = n
-OCL_DEVICE = xilinx:adm-pcie-7v3:1ddr:3.0
-OCL_PLATFORM = $AWS_PLATFORM
+OCL_DEVICE = xilinx:aws-vu9p-f1:4ddr-xpr-2pr:4.0
+OCL_PLATFORM = $(AWS_PLATFORM)
 
 # Check if the user specified opencl platform
 ifneq ($(OCL_PLATFORM), one_of_default_platforms)
