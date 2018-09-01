@@ -137,6 +137,7 @@ void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	for (int x = 0; x < 14; x++){
 		if (x < O){
 			for (int y = 0; y < 14; y++){
+#pragma HLS PIPELINE off
 				if (y < O){
 					bit64_t max =
 					input[2*y+0][2*x+0]|
@@ -165,7 +166,6 @@ inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit w[MAX_W_CONV]){
 }
 
 inline int popcount(unsigned int x){
-#pragma HLS INLINE	
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
@@ -309,7 +309,7 @@ void ld_wt_fc1(int n, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[49]){
 		int w_index = n * 49 + i;
 		w_buff[i] = weight[w_index];
 	}
-	
+
 }
 
 void calc_1(int n, bit64_t w_buff[49], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
@@ -331,7 +331,7 @@ void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], 
 
 	for (int n = 0; n < FC2_UNITS; n++){
 		ld_wt_fc1(n, weight, w_buff);
-		calc_1(n, w_buff, input, output, &count, bias, con);		
+		calc_1(n, w_buff, input, output, &count, bias, con);
 	}
 }
 
