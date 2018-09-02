@@ -107,7 +107,6 @@ int main(int argc, char** argv){
 	bnn_world.addProgram(KernelFile);
 
 	rosetta::CLKernel Bnn(bnn_world.getContext(), bnn_world.getProgram(), "bnn", bnn_world.getDevice());
-	bnn_world.addKernel(Bnn);
 
 	rosetta::CLMemObj weightfc1((void*)w_fc1, sizeof(bit64_t), MAX_W_FC / 64, CL_MEM_READ_ONLY);
 	rosetta::CLMemObj weightfc2((void*)w_fc2, sizeof(bit64_t), 80, CL_MEM_READ_ONLY);
@@ -121,6 +120,8 @@ int main(int argc, char** argv){
 
 	bnn_world.addMemObj(weightfc1);
 	bnn_world.addMemObj(weightfc2);
+
+	bnn_world.addKernel(Bnn);
 
 	for (int test = 0; test < TEST_SIZE; test++) {
 
@@ -139,7 +140,7 @@ int main(int argc, char** argv){
 		bnn_world.setMemKernelArg(0, 2, 0);
 		bnn_world.setMemKernelArg(0, 3, 1);
 
-		bnn_world.runKernels();
+		bnn_world.runKernels(false);
 
 		bnn_world.readMemObj(2*test+3);
 

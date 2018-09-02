@@ -1,6 +1,5 @@
 #include "model_conv.h"
 #include "model_dense.h"
-#include "bnn.h"
 #include <fstream>
 #include <iomanip>
 #define USE_LINEBUFFER

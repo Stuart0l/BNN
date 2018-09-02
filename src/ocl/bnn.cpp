@@ -6,7 +6,6 @@
 
 inline bool if_mac(int x, int y, int I)
 {
-#pragma HLS INLINE
 	if (x < PADDING / 2 || x >= (I - PADDING / 2) || y < PADDING / 2 || y >= (I - PADDING / 2))
 		return false;
 	return true;
@@ -60,7 +59,6 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 #pragma HLS ARRAY_PARTITION variable=line_buffer complete dim=1
 	bit window_buffer[F][F];
 #pragma HLS ARRAY_PARTITION variable=window_buffer complete dim=0
-	int O = I - F + 1;
 
 	for (int n = 0; n < 32; n++)
 #pragma HLS UNROLL
@@ -137,7 +135,6 @@ void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	for (int x = 0; x < 14; x++){
 		if (x < O){
 			for (int y = 0; y < 14; y++){
-#pragma HLS PIPELINE off
 				if (y < O){
 					bit64_t max =
 					input[2*y+0][2*x+0]|
@@ -166,6 +163,7 @@ inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit w[MAX_W_CONV]){
 }
 
 inline int popcount(unsigned int x){
+#pragma HLS INLINE
 	x = x - ((x >> 1) & 0x55555555);
 	x = (x & 0x33333333) + ((x >> 2) & 0x33333333);
 	x = (x + (x >> 4)) & 0x0f0f0f0f;
@@ -303,35 +301,70 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 }
 #endif
 
-void ld_wt_fc1(int n, bit64_t weight[MAX_W_FC/64], bit64_t w_buff[49]){
-	for (int i = 0; i < 49; i++){
+void ld_wt_fc1(bit64_t input[49], bit64_t i_buff[7], bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
+
+	static int m = 0;
+	static int n = 0;
+	int M = 7 * m;
+	int MN = n * 49 + M;
+	m++;
+	for (int i = 0; i < 7; i++){
 #pragma HLS PIPELINE
-		int w_index = n * 49 + i;
+		int w_index = MN + i;
+		int i_index = M + i;
 		w_buff[i] = weight[w_index];
+		i_buff[i] = input[i_index];
 	}
-
+	if (m == 7) {
+		n++;
+		if(n == FC2_UNITS)
+			n = 0;
+		m = 0;
+	}
 }
 
-void calc_1(int n, bit64_t w_buff[49], bit64_t input[49], bit64_t output[8], int *count, const fix bias[FC2_UNITS], const fix con){
-	for (int mm = 0; mm < 49; mm++){
+void calc_1(bit64_t w_buff[7], bit64_t i_buff[7], bit64_t output[8], const fix con){
+
+	static int m = 0;
+	static int n = 0;
+	static int count = 0;
+	static bit64_t tmp_out = 0;
+	int M = 7 * m;
+	m++;
+	for (int mm = 0; mm < 7; mm++){
 #pragma HLS UNROLL
-		bit64_t tmp = w_buff[mm] ^ input[mm];
-		*count += (64 - popcount(tmp.to_uint64()));
+		bit64_t tmp = w_buff[mm] ^ i_buff[mm];
+		count += (64 - popcount(tmp.to_uint64()));
 	}
-	int calc_result = (*count << 1) - FC1_UNITS;
-	output[n >> 6][n & 63] = (calc_result * con + bias[n]).is_neg() ? 0 : 1;
-	*count = 0;
+	if (m == 7){
+		int calc_result = (count << 1) - FC1_UNITS;
+		tmp_out[n & 63] = (calc_result * con + b_fc1[n]).is_neg() ? 0 : 1;
+		count = 0;
+		n++;
+		if ((n & 63) == 0) {
+			output[(n >> 6) - 1] = tmp_out;
+			tmp_out = 0;
+			if (n & 512)
+				n = 0;
+		}
+		m = 0;
+	}
 }
 
-void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix bias[FC2_UNITS], const fix con){
+void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix con){
 #pragma HLS INLINE off
-	bit64_t w_buff[49];
+	bit64_t w_buff[7];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
-	int count;
+	bit64_t i_buff[7];
+#pragma HLS ARRAY_PARTITION variable=i_buff complete
+	/*for (int i = 0; i < 7; i++)
+#pragma HLS UNROLL
+		w_buff[i]=0;*/
 
-	for (int n = 0; n < FC2_UNITS; n++){
-		ld_wt_fc1(n, weight, w_buff);
-		calc_1(n, w_buff, input, output, &count, bias, con);
+	for (int i = 0; i < FC2_UNITS*7; i++){
+#pragma HLS DATAFLOW
+		ld_wt_fc1(input, i_buff, weight, w_buff);
+		calc_1(w_buff, i_buff, output, con);
 	}
 }
 
@@ -379,7 +412,6 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 	bit64_t mem2[28][28];
 	bit64_t mem3[14][14];
 	bit64_t memfc1[49];
-#pragma HLS ARRAY_PARTITION variable=memfc1 complete
 	bit64_t memfc2[8];
 #pragma HLS ARRAY_PARTITION variable=memfc2 complete
 
@@ -405,7 +437,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 			memfc1[o_index] = mem3[j][i];
 		}
 
-	dense_1(memfc1, memfc2, weight1, b_fc1, con_fc1);
+	dense_1(memfc1, memfc2, weight1, con_fc1);
 
 	dense_2(memfc2, output, weight2, b_fc2, con_fc2);
 
