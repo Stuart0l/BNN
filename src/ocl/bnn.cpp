@@ -399,15 +399,10 @@ void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix bi
 extern "C" {
 #endif
 void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_FC/64], bit64_t weight2[80]){
-#pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=weight1 offset=slave bundle=gmem
-#pragma HLS INTERFACE m_axi port=weight2 offset=slave bundle=gmem
-#pragma HLS INTERFACE s_axilite port=x bundle=control
-#pragma HLS INTERFACE s_axilite port=output bundle=control
-#pragma HLS INTERFACE s_axilite port=weight1 bundle=control
-#pragma HLS INTERFACE s_axilite port=weight2 bundle=control
-#pragma HLS INTERFACE s_axilite port=return bundle=control
+#pragma HLS INTERFACE axis port=x
+#pragma HLS INTERFACE axis port=output
+#pragma HLS INTERFACE axis port=weight1
+#pragma HLS INTERFACE axis port=weight2
 	bit mem1[28][28];
 	bit64_t mem2[28][28];
 	bit64_t mem3[14][14];
