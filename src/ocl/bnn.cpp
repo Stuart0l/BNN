@@ -1,14 +1,10 @@
 #include "model_conv.h"
 #include "model_dense.h"
-#include <fstream>
-#include <iomanip>
 #define USE_LINEBUFFER
 
 inline bool if_mac(int x, int y, int I)
 {
-	if (x < PADDING / 2 || x >= (I - PADDING / 2) || y < PADDING / 2 || y >= (I - PADDING / 2))
-		return false;
-	return true;
+	return !(x < PADDING / 2 || x >= (I - PADDING / 2) || y < PADDING / 2 || y >= (I - PADDING / 2));
 }
 
 inline void load_weight(bit w_buff[32][5][5], const bit w[MAX_W_CONV])
@@ -35,7 +31,6 @@ inline void store_ofmap(fix o_buff[32][28][28], bit64_t out[28][28])
 #pragma HLS UNROLL
 				fix tmp = o_buff[fn][j][i]*k1[fn]+h1[fn];
 				out[j][i][fn] = tmp.is_neg() ? 0 : 1;
-				o_buff[fn][j][i] = 0.;
 			}
 		}
 	}
@@ -47,7 +42,7 @@ inline void store_ofmap(fix o_buff[32][28][28], bit64_t out[28][28])
 //              N - number of output fmaps
 //              I - width of input fmaps
 // @param[out] : output - output fmaps
-void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], int M, int N, int I, fix con)
+void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CONV], fix con)
 {
 	fix output_buffer[32][28][28];
 #pragma HLS ARRAY_PARTITION variable=output_buffer complete dim=1
@@ -90,12 +85,10 @@ x:
 			for (int c = 0; c < F; c++){
 			r:
 				for (int r = 0; r < F; r++){
-					if (if_mac(x + c, y + r, I)){
+					if (if_mac(x + c, y + r, 32)){
 						for (int n = 0; n < 32; n++){
 							fix tmp_out;
-							if (n < N){
-								tmp_out = (window_buffer[r][c] == weight_buffer[n][r][c]) ? con : con.getNeg();
-							}
+							tmp_out = (window_buffer[r][c] == weight_buffer[n][r][c]) ? con : con.getNeg();
 							calc_buffer[n] += tmp_out;
 						}
 					}
@@ -132,18 +125,14 @@ void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 		for (int i = 0; i < 14; i++)
 			output[j][i] = 0;
 
-	for (int x = 0; x < 14; x++){
-		if (x < O){
-			for (int y = 0; y < 14; y++){
-				if (y < O){
-					bit64_t max =
-					input[2*y+0][2*x+0]|
-					input[2*y+1][2*x+0]|
-					input[2*y+0][2*x+1]|
-					input[2*y+1][2*x+1];
-					output[y][x] = max;
-				}
-			}
+	for (int x = 0; x < O; x++){
+		for (int y = 0; y < O; y++){
+			bit64_t max =
+			input[2*y+0][2*x+0]|
+			input[2*y+1][2*x+0]|
+			input[2*y+0][2*x+1]|
+			input[2*y+1][2*x+1];
+			output[y][x] = max;
 		}
 	}
 }
@@ -301,20 +290,20 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_
 }
 #endif
 
-void ld_wt_fc1(bit64_t input[49], bit64_t i_buff[7], bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
+void ld_wt_fc1(bit64_t input[14][14], bit64_t i_buff[7], const bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
 
 	static int m = 0;
 	static int n = 0;
 	int M = 7 * m;
 	int MN = n * 49 + M;
-	m++;
 	for (int i = 0; i < 7; i++){
 #pragma HLS PIPELINE
 		int w_index = MN + i;
 		int i_index = M + i;
 		w_buff[i] = weight[w_index];
-		i_buff[i] = input[i_index];
+		i_buff[i] = input[m][i];
 	}
+	m++;
 	if (m == 7) {
 		n++;
 		if(n == FC2_UNITS)
@@ -351,7 +340,7 @@ void calc_1(bit64_t w_buff[7], bit64_t i_buff[7], bit64_t output[8], const fix c
 	}
 }
 
-void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix con){
+void dense_1(bit64_t input[14][14], bit64_t output[8], const bit64_t weight[MAX_W_FC/64], const fix con){
 #pragma HLS INLINE off
 	bit64_t w_buff[7];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
@@ -368,7 +357,7 @@ void dense_1(bit64_t input[49], bit64_t output[8], bit64_t weight[MAX_W_FC/64], 
 	}
 }
 
-void ld_wt_fc2(int n, bit64_t weight[80], bit64_t w_buff[8]){
+void ld_wt_fc2(int n, const bit64_t weight[80], bit64_t w_buff[8]){
 	for (int i = 0; i < 8; i++){
 #pragma HLS PIPELINE
 		int w_index = (n << 3) + i;
@@ -376,7 +365,7 @@ void ld_wt_fc2(int n, bit64_t weight[80], bit64_t w_buff[8]){
 	}
 }
 
-void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix bias[OUT], const fix con){
+void dense_2(bit64_t input[8], fixo output[10], const bit64_t weight[80], const fix con){
 #pragma HLS INLINE off
 	bit64_t w_buff[8];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
@@ -390,7 +379,7 @@ void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix bi
 			count += (64 - popcount(tmp.to_uint64()));
 		}
 		int calc_result = (count << 1) - FC2_UNITS;
-		output[n] = calc_result * con + bias[n];
+		output[n] = calc_result * con + b_fc2[n];
 		count = 0;
 	}
 }
@@ -398,15 +387,16 @@ void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix bi
 #ifdef __cplusplus
 extern "C" {
 #endif
-void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_FC/64], bit64_t weight2[80]){
-#pragma HLS INTERFACE axis port=x
-#pragma HLS INTERFACE axis port=output
-#pragma HLS INTERFACE axis port=weight1
-#pragma HLS INTERFACE axis port=weight2
+void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10]){
+#pragma HLS INTERFACE m_axi port=x offset=slave bundle=gmem
+#pragma HLS INTERFACE m_axi port=output offset=slave bundle=gmem
+#pragma HLS INTERFACE s_axilite port=x bundle=control
+#pragma HLS INTERFACE s_axilite port=output bundle=control
+#pragma HLS INTERFACE s_axilite port=return bundle=control
+
 	bit mem1[28][28];
 	bit64_t mem2[28][28];
 	bit64_t mem3[14][14];
-	bit64_t memfc1[49];
 	bit64_t memfc2[8];
 #pragma HLS ARRAY_PARTITION variable=memfc2 complete
 
@@ -417,7 +407,7 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 			mem1[i][j] = x[i_index];
 		}
 
-	conv_1(mem1, mem2, w_conv1, 1, 32, 32, con1);
+	conv_1(mem1, mem2, w_conv1, con1);
 
 	max_pool(mem2, mem3, 32, I_WIDTH1);
 
@@ -425,16 +415,9 @@ void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_F
 
 	max_pool(mem2, mem3, 64, I_WIDTH2);
 
-	for (int i = 0; i < O_WIDTH; i++)
-		for (int j = 0; j < O_WIDTH; j++){
-#pragma HLS PIPELINE
-			int o_index = i + j * O_WIDTH;
-			memfc1[o_index] = mem3[j][i];
-		}
+	dense_1(mem3, memfc2, w_fc1, con_fc1);
 
-	dense_1(memfc1, memfc2, weight1, con_fc1);
-
-	dense_2(memfc2, output, weight2, b_fc2, con_fc2);
+	dense_2(memfc2, output, w_fc2, con_fc2);
 
 }
 #ifdef __cplusplus

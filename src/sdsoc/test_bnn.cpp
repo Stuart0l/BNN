@@ -1,6 +1,5 @@
 #include <iostream>
 #include <fstream>
-#include <cstdlib>
 #include "bnn.h"
 #ifdef __SDSCC__
 	#include "sds_lib.h"

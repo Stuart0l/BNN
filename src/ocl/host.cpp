@@ -1,23 +1,15 @@
 #include <iostream>
 #include <fstream>
-#include <cstdlib>
 #include <getopt.h>
 #include <string>
 #include "bnn.h"
 #include "utils.h"
-#ifdef __SDSCC__
-	#include "sds_lib.h"
-#endif
 #ifdef _WIN32
 #define TESTROUTE "e:/Computer/HLS/BNN/data/test_b.dat"
 #define LABELROUTE "e:/Computer/HLS/BNN/data/label.dat"
-#define WFC1ROUTE "e:/Computer/HLS/BNN/data/weight_10bp"
-#define WFC2ROUTE "e:/Computer/HLS/BNN/data/weight_12bp"
 #else
 	#define TESTROUTE "data/test_b.dat"
 	#define LABELROUTE "data/label.dat"
-	#define WFC1ROUTE "data/weight_10bp"
-	#define WFC2ROUTE "data/weight_12bp"
 	#include "timer.h"
 #endif
 #include "CLWorld.h"
@@ -48,48 +40,15 @@ void read_test_labels(int test_labels[TEST_SIZE]) {
 	}
 }
 
-void read_fc1_weights(bit64_t* w_fc1) {
-	std::ifstream infile(WFC1ROUTE);
-	if (infile.is_open()) {
-		for (int index = 0; index < MAX_W_FC / 64; index++) {
-			unsigned long long i;
-			infile >> i;
-			w_fc1[index] = i;
-		}
-		infile.close();
-	}
-}
-
-void read_fc2_weights(bit64_t* w_fc2) {
-	std::ifstream infile(WFC2ROUTE);
-	if (infile.is_open()) {
-		for (int index = 0; index < 80; index++) {
-			unsigned long long i;
-			infile >> i;
-			w_fc2[index] = i;
-		}
-		infile.close();
-	}
-}
-
 int main(int argc, char** argv){
 
 	int8_t** test_images;
-	#ifdef __SDSCC__
-		bit64_t* w_fc1 = (bit64_t*)sds_alloc(MAX_W_FC / 64 * sizeof(bit64_t));
-		bit64_t* w_fc2 = (bit64_t*)sds_alloc(80 * sizeof(bit64_t));
-	#else
-		bit64_t* w_fc1 = new bit64_t[MAX_W_FC / 64];
-		bit64_t* w_fc2 = new bit64_t[80];
-	#endif
 	test_images = new int8_t*[TEST_SIZE];
 	for(int i = 0; i < TEST_SIZE; i++)
 		test_images[i] = new int8_t[784];
 	int test_labels[TEST_SIZE];
 	read_test_images(test_images);
 	read_test_labels(test_labels);
-	read_fc1_weights(w_fc1);
-	read_fc2_weights(w_fc2);
 
 	float correct = 0.0;
 
@@ -108,8 +67,6 @@ int main(int argc, char** argv){
 
 	rosetta::CLKernel Bnn(bnn_world.getContext(), bnn_world.getProgram(), "bnn", bnn_world.getDevice());
 
-	rosetta::CLMemObj weightfc1((void*)w_fc1, sizeof(bit64_t), MAX_W_FC / 64, CL_MEM_READ_ONLY);
-	rosetta::CLMemObj weightfc2((void*)w_fc2, sizeof(bit64_t), 80, CL_MEM_READ_ONLY);
 	rosetta::CLMemObj inputMem((void*)input_image, sizeof(bit8_t), 784, CL_MEM_READ_ONLY);
 	rosetta::CLMemObj outMem((void*)out, sizeof(fixo), OUT, CL_MEM_WRITE_ONLY);
 
@@ -117,9 +74,6 @@ int main(int argc, char** argv){
 	int local_size[3] = {1, 1, 1};
 	Bnn.set_global(global_size);
 	Bnn.set_local(local_size);
-
-	bnn_world.addMemObj(weightfc1);
-	bnn_world.addMemObj(weightfc2);
 
 	bnn_world.addKernel(Bnn);
 
@@ -135,14 +89,12 @@ int main(int argc, char** argv){
 		bnn_world.addMemObj(inputMem);
 		bnn_world.addMemObj(outMem);
 
-		bnn_world.setMemKernelArg(0, 0, 2*test+2);
-		bnn_world.setMemKernelArg(0, 1, 2*test+3);
-		bnn_world.setMemKernelArg(0, 2, 0);
-		bnn_world.setMemKernelArg(0, 3, 1);
+		bnn_world.setMemKernelArg(0, 0, 2*test);
+		bnn_world.setMemKernelArg(0, 1, 2*test+1);
 
 		bnn_world.runKernels(false);
 
-		bnn_world.readMemObj(2*test+3);
+		bnn_world.readMemObj(2*test+1);
 
 		for (int i = 0; i < 10; i++)
 			result[i] = out[i].to_float();
