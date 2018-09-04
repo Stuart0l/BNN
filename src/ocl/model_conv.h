@@ -15,8 +15,8 @@ const fix h1[MAX_F] = {
     #include"../../data/weight_h1"
 };
 
-const bit w_conv2[MAX_W_CONV] = {
-    #include"../../data/weight_5b"
+const bit32_t w_conv2[MAX_W_CONV/32] = {
+    #include"../../data/weight_5bp"
 }; //binary weight
 
 const fix k2[MAX_F] = {

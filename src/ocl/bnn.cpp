@@ -137,18 +137,16 @@ void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	}
 }
 
-inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit w[MAX_W_CONV]){
-	for (int m = 0; m < 32; m++){
-		for (int c = 0; c < F; c++){
-			for (int r = 0; r < F; r++){
-#pragma HLS PIPELINE
-				for (int wn = 0; wn < 8; wn++){
-					int w_index = c + r * F + (n + wn + m * 64) * FILTER_SIZE;
-					w_buff[wn][r][c][m] = w[w_index];
-				}
+inline void ld_wt(int n, bit32_t w_buff[8][5][5], const bit32_t w[MAX_W_CONV/32]){
+	for (int wn = 0; wn < 8; wn++){
+		for (int r = 0; r < F; r++){
+			for (int c = 0; c < F; c++){
+#pragma HLS PIPELINE			
+				int w_index = c + r * F + (n + wn) * FILTER_SIZE;
+				w_buff[wn][r][c] = w[w_index];
 			}
 		}
-	}
+	}	
 }
 
 inline int popcount(unsigned int x){
@@ -172,7 +170,7 @@ inline int popcount(unsigned long long x){
 }
 
 #ifdef USE_LINEBUFFER
-void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV]){
+void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[MAX_W_CONV]){
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
 
