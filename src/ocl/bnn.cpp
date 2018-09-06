@@ -1,6 +1,5 @@
 #include "model_conv.h"
 #include "model_dense.h"
-#define USE_LINEBUFFER
 
 inline bool if_mac(int x, int y, int I)
 {
@@ -64,55 +63,50 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 #pragma HLS PIPELINE
 			line_buffer[i+2][j] = input[i][j];
 	} //initialize linebuffer
+	for (int j = 0; j < 3; j++) {
+#pragma HLS PIPELINE
+		for (int i = 2; i < F; i++) {
+			window_buffer[i][j + 2] = line_buffer[i][j];
+			if (i < F - 1)
+				line_buffer[i][j] = line_buffer[i + 1][j];
+			else
+				line_buffer[i][j] = input[3][j];
+		}
+	} //initialize windowbuffer
 
 	load_weight(weight_buffer, weight);
 x:
-	for (int y = 0; y < 28; y++){
-		for (int j = 0; j < 3; j++){
+	for (int xy = 0; xy < I_WIDTH1*I_WIDTH1; xy++){
 #pragma HLS PIPELINE
-			for (int i = 0; i < F; i++){
-				window_buffer[i][j+2] = line_buffer[i][j];
-				if (i < F - 1)
-					line_buffer[i][j] = line_buffer[i+1][j];
-				else
-					line_buffer[i][j] = (y+3<I_WIDTH1) ? input[y+3][j] : (bit)0;
-			}
-		} //initialize windowbuffer
-	y:
-		for (int x = 0; x < 28; x++){
-#pragma HLS PIPELINE
-		c:
-			for (int c = 0; c < F; c++){
-			r:
-				for (int r = 0; r < F; r++){
-					if (if_mac(x + c, y + r, 32)){
-						for (int n = 0; n < 32; n++){
-							fix tmp_out;
-							tmp_out = (window_buffer[r][c] == weight_buffer[n][r][c]) ? con : con.getNeg();
-							calc_buffer[n] += tmp_out;
-						}
+#pragma AP dependence variable=line_buffer inter false
+		int x = xy%I_WIDTH1;
+		int y = xy / I_WIDTH1;
+		int next_x = (x + 3) % 28;
+	c:
+		for (int c = 0; c < F; c++){
+		r:
+			for (int r = 0; r < F; r++){
+				if (if_mac(x + c, y + r, 32)){
+					for (int n = 0; n < 32; n++){
+						fix tmp_out;
+						tmp_out = (window_buffer[r][c] == weight_buffer[n][r][c]) ? con : con.getNeg();
+						calc_buffer[n] += tmp_out;
 					}
 				}
 			}
-			for (int nc = 0; nc < 32; nc++){
-				output_buffer[nc][y][x] = calc_buffer[nc];
-				calc_buffer[nc] = 0;
-			}
-			for (int i = 0; i < F; i++){
-				for (int j  = 0; j < F - 1; j++)
-					window_buffer[i][j] = window_buffer[i][j + 1]; //shift windowbuffer
-				if (x < 25)
-					window_buffer[i][4] = line_buffer[i][x+3]; //shift next into window buffer
-			}
-			for (int i = 0; i < F; i++){
-				if (x < 25){
-					if (i < F - 1)
-						line_buffer[i][x+3] = line_buffer[i+1][x+3];
-					else
-						line_buffer[i][x+3] = (y+3<I_WIDTH1) ? input[y+3][x+3] : (bit)0;
-				}
-			}
 		}
+		for (int nc = 0; nc < 32; nc++){
+			output_buffer[nc][y][x] = calc_buffer[nc];
+			calc_buffer[nc] = 0;
+		}
+		for (int i = 0; i < F; i++){
+			for (int j  = 0; j < F - 1; j++)
+				window_buffer[i][j] = window_buffer[i][j + 1]; //shift windowbuffer
+			window_buffer[i][4] = line_buffer[i][next_x]; //shift next into window buffer
+		}
+		for (int i = 0; i < F-1; i++)
+			line_buffer[i][next_x] = line_buffer[i+1][next_x];
+		line_buffer[F-1][next_x] = (y + 3<I_WIDTH1) ? input[y + 3][next_x] : bit(0);
 	}
 	store_ofmap(output_buffer, output);
 }
@@ -169,8 +163,7 @@ inline int popcount(unsigned long long x){
     return x & 0x000000000000007F;
 }
 
-#ifdef USE_LINEBUFFER
-void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[MAX_W_CONV]){
+void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[MAX_W_CONV/32]){
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
 
@@ -194,99 +187,50 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 			for (int i = 0; i < 3; i++)
 #pragma HLS PIPELINE
 				line_buff[i+2][j] = input[i][j](31, 0);
-		for (int y = 0; y < 14; y++){
-			for (int j = 0; j < 3; j++){
+		for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-				for (int i = 0; i < F; i++){
-					window_buff[i][j+2] = line_buff[i][j];
-					if (i < F - 1)
-						line_buff[i][j] = line_buff[i+1][j];
-					else
-						line_buff[i][j] = (y+3<I_WIDTH2) ? input[y+3][j](31, 0) : (bit32_t)0;
-				}
-			} //initialize windowbuffer
-			for (int x = 0; x < 14; x++){
+			for (int i = 2; i < F; i++) {
+				window_buff[i][j + 2] = line_buff[i][j];
+				if (i < F - 1)
+					line_buff[i][j] = line_buff[i + 1][j];
+				else
+					line_buff[i][j] = input[3][j](31, 0);
+			}
+		} //initialize windowbuffer
+		for (int xy = 0; xy < I_WIDTH2*I_WIDTH2; xy++) {
 #pragma HLS PIPELINE
-				for (int c = 0; c < F; c++){
-					for (int r = 0; r < F; r++){
-						if (if_mac(x + c, y + r, 18)){
-							mac_num++;
-							for (int nn = 0; nn < 8; nn++){
-								bit32_t tmp = w_buff[nn][r][c] ^ window_buff[r][c];
-								count[nn] += (32 - popcount(tmp.to_uint()));
-							}
+#pragma AP dependence variable=line_buff inter false
+			int x = xy%I_WIDTH2;
+			int y = xy / I_WIDTH2;
+			int next_x = (x + 3) % 14;
+			for (int c = 0; c < F; c++) {
+				for (int r = 0; r < F; r++) {
+					if (if_mac(x + c, y + r, 18)) {
+						mac_num++;
+						for (int nn = 0; nn < 8; nn++) {
+							bit32_t tmp = w_buff[nn][r][c] ^ window_buff[r][c];
+							count[nn] += popcount(tmp.to_uint());
 						}
 					}
 				}
-				for (int i = 0; i < F; i++){
-					for (int j = 0; j < F-1; j++)
-						window_buff[i][j] = window_buff[i][j+1]; //shift window buffer
-					if (x < 11)
-						window_buff[i][4] = line_buff[i][x+3]; //shift next into windowbuffer
-				}
-				for (int i = 0; i < F; i++){
-					if (x < 11){
-						if (i < F - 1)
-							line_buff[i][x+3] = line_buff[i+1][x+3];
-						else
-							line_buff[4][x+3] = (y+3<14) ? input[y+3][x+3](31, 0) : (bit32_t)0;
-					}
-				}
-				for (int nn = 0; nn < 8; nn++){
-					fix tmp = ((count[nn] << 1) - (mac_num << 5)) * k2[n + nn];
-					output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
-					count[nn] = 0;
-				}
-				mac_num = 0;
 			}
+			for (int i = 0; i < F; i++) {
+				for (int j = 0; j < F - 1; j++)
+					window_buff[i][j] = window_buff[i][j + 1]; //shift window buffer
+				window_buff[i][4] = line_buff[i][next_x]; //shift next into windowbuffer
+			}
+			for (int i = 0; i < F-1; i++) 
+				line_buff[i][next_x] = line_buff[i + 1][next_x];
+			line_buff[F-1][next_x] = (y + 3 < 14) ? input[y + 3][next_x](31, 0) : bit32_t(0);
+			for (int nn = 0; nn < 8; nn++) {
+				fix tmp = ((mac_num << 5) - (count[nn] << 1)) * k2[n + nn];
+				output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
+				count[nn] = 0;
+			}
+			mac_num = 0;
 		}
 	}
 }
-#else
-void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit weight[MAX_W_CONV]){
-#pragma HLS ARRAY_PARTITION variable=k2 complete
-#pragma HLS ARRAY_PARTITION variable=h2 complete
-
-	bit32_t w_buff[16][5][5];
-#pragma HLS ARRAY_PARTITION variable=w_buff complete dim=1
-	bit o_buff[16][14][14];
-#pragma HLS ARRAY_PARTITION variable=o_buff complete dim=1
-	int count[16];
-#pragma HLS ARRAY_PARTITION variable=count complete
-	for (int n = 0; n < 16; n++)
-#pragma HLS UNROLL
-		count[n] = 0;
-
-	int mac_num = 0;
-
-	for (int n = 0; n < 64; n += 16){
-		ld_wt(n, w_buff, weight);
-		for (int x = 0; x < 14; x++){
-			for (int y = 0; y < 14; y++){
-				for (int c = 0; c < F; c++){
-					for (int r = 0; r < F; r++){
-#pragma HLS PIPELINE rewind
-						if (if_mac(x + c, y + r, 18)){
-							mac_num++;
-							for (int nn = 0; nn < 16; nn++){
-								bit32_t tmp = w_buff[nn][r][c] ^ input[y + r - PADDING / 2][x + c - PADDING / 2];
-								count[nn] += (32 - popcount(tmp.to_uint()));
-							}
-						}
-					}
-				}
-				for (int nn = 0; nn < 16; nn++){
-#pragma HLS UNROLL
-					int tmp = (count[nn] << 1) - (mac_num << 5);
-					output[y][x][n + nn] = (tmp * k2[n + nn] + h2[n + nn]).is_neg() ? 0 : 1;
-					count[nn] = 0;
-				}
-				mac_num = 0;
-			}
-		}
-	}
-}
-#endif
 
 void ld_wt_fc1(bit64_t input[14][14], bit64_t i_buff[7], const bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
 
