@@ -67,7 +67,7 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 	} //initialize linebuffer
 	for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-		for (int i = 2; i < F; i++) {
+		for (int i = 0; i < F; i++) {
 			window_buffer[i][j + 2] = line_buffer[i][j];
 			if (i < F - 1)
 				line_buffer[i][j] = line_buffer[i + 1][j];
@@ -108,7 +108,10 @@ x:
 		}
 		for (int i = 0; i < F-1; i++)
 			line_buffer[i][next_x] = line_buffer[i+1][next_x];
-		line_buffer[F-1][next_x] = (y + 3<I_WIDTH1) ? input[y + 3][next_x] : bit(0);
+		if (x < 25)
+			line_buffer[F - 1][next_x] = (y + 3 < I_WIDTH1) ? input[y + 3][next_x] : bit(0);
+		else
+			line_buffer[F - 1][next_x] = (y + 4 < I_WIDTH2) ? input[y + 4][next_x] : bit(0);
 	}
 	store_ofmap(output_buffer, output);
 }
@@ -191,7 +194,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 				line_buff[i+2][j] = input[i][j](31, 0);
 		for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-			for (int i = 2; i < F; i++) {
+			for (int i = 0; i < F; i++) {
 				window_buff[i][j + 2] = line_buff[i][j];
 				if (i < F - 1)
 					line_buff[i][j] = line_buff[i + 1][j];
@@ -223,7 +226,10 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 			}
 			for (int i = 0; i < F-1; i++) 
 				line_buff[i][next_x] = line_buff[i + 1][next_x];
-			line_buff[F-1][next_x] = (y + 3 < 14) ? input[y + 3][next_x](31, 0) : bit32_t(0);
+			if (x < 11)
+				line_buff[F - 1][next_x] = (y + 3 < 14) ? input[y + 3][next_x](31, 0) : bit32_t(0);
+			else
+				line_buff[F - 1][next_x] = (y + 4 < 14) ? input[y + 4][next_x](31, 0) : bit32_t(0);
 			for (int nn = 0; nn < 8; nn++) {
 				fix tmp = ((mac_num << 5) - (count[nn] << 1)) * k2[n + nn];
 				output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
