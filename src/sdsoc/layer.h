@@ -21,5 +21,6 @@ const fix con1 = sqrt(2.0/(F*F*1));//0.28284271;
 const fix con2 = sqrt(2.0/(F*F*32));//0.05;
 const fix con_fc1 = sqrt(2.0/FC1_UNITS);
 const fix con_fc2 = sqrt(2.0/FC2_UNITS);
+const int batch = 4;
 
 #endif

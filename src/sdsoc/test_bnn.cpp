@@ -92,20 +92,21 @@ int main(int argc, char** argv){
 	float correct = 0.0;
 
 #ifdef __SDSOC__
-	bit8_t* input_image = (bit8_t*)sds_alloc()(I_WIDTH1*I_WIDTH1 * sizeof(bit8_t));
+	bit8_t* input_image = (bit8_t*)sds_alloc(batch*I_WIDTH1*I_WIDTH1 * sizeof(bit8_t));
 #else
-	bit8_t input_image[I_WIDTH1*I_WIDTH1];
+	bit8_t input_image[batch*I_WIDTH1*I_WIDTH1];
 #endif
-	fixo out[10];
-	float result[10];
+	fixo out[batch][10];
+	float result[batch][10];
 	#ifndef _WIN32
 		Timer timer_("bnn timer");
 	#endif
 
-	for (int test = 0; test < TEST_SIZE; test++) {
+	for (int test = 0; test < TEST_SIZE; test+=4) {
 
 		for (int i = 0; i < 784; i++){
-			input_image[i] = test_images[test][i];
+			for(int b = 0; b < batch; b++)
+				input_image[b*784 + i] = test_images[test + b][i];
 		}
 		#ifndef _WIN32
 			timer_.start();
@@ -113,19 +114,25 @@ int main(int argc, char** argv){
 
 		bnn(input_image, out, w_fc1, w_fc2);
 
-		for (int i = 0; i < 10; i++)
-			result[i] = out[i].to_float();
+		for (int b = 0; b < batch; b++)
+			for (int i = 0; i < 10; i++)
+				result[b][i] = out[b][i].to_float();
 
-		int max_id = 0;
-		for (int i = 1; i < 10; i++) {
-			if (result[i] > result[max_id])
-				max_id = i;
+		int max_id[batch] = {};
+		for (int b = 0; b < batch; b++) {
+			int max = 0;
+			for (int i = 1; i < 10; i++)
+				if (result[b][i] > result[b][max])
+					max = i;
+			max_id[b] = max;
 		}
 		#ifndef _WIN32
 			timer_.stop();
 		#endif
-		if (max_id == test_labels[test]) correct += 1.0;
-		cout << test << ": " << max_id << " " << test_labels[test] << endl;
+		for (int b = 0; b < batch; b++){
+			if (max_id[b] == test_labels[test + b]) correct += 1.0;
+			cout << test + b << ": " << max_id[b] << " " << test_labels[test + b] << endl;
+		}
 	}
 	cout << correct/TEST_SIZE << endl;
 #ifdef __SDSCC__

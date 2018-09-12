@@ -60,14 +60,14 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 #pragma HLS UNROLL
 		calc_buffer[n] = 0;
 
-	for (int j = 0; j < I_WIDTH1; j++){
+	for (int j = 0; j < I_WIDTH1; j++) {
 		for (int i = 0; i < 3; i++)
 #pragma HLS PIPELINE
-			line_buffer[i+2][j] = input[i][j];
+			line_buffer[i + 2][j] = input[i][j];
 	} //initialize linebuffer
 	for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-		for (int i = 0; i < F; i++) {
+		for (int i = 2; i < F; i++) {
 			window_buffer[i][j + 2] = line_buffer[i][j];
 			if (i < F - 1)
 				line_buffer[i][j] = line_buffer[i + 1][j];
@@ -78,18 +78,18 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 
 	load_weight(weight_buffer, weight);
 x:
-	for (int xy = 0; xy < I_WIDTH1*I_WIDTH1; xy++){
+	for (int xy = 0; xy < I_WIDTH1*I_WIDTH1; xy++) {
 #pragma HLS PIPELINE
 #pragma AP dependence variable=line_buffer inter false
 		int x = xy%I_WIDTH1;
 		int y = xy / I_WIDTH1;
 		int next_x = (x + 3) % 28;
 	c:
-		for (int c = 0; c < F; c++){
+		for (int c = 0; c < F; c++) {
 		r:
-			for (int r = 0; r < F; r++){
-				if (if_mac(x + c, y + r, 32)){
-					for (int n = 0; n < 32; n++){
+			for (int r = 0; r < F; r++) {
+				if (if_mac(x + c, y + r, 32)) {
+					for (int n = 0; n < 32; n++) {
 						fix tmp_out;
 						tmp_out = (window_buffer[r][c] == weight_buffer[n][r][c]) ? con : con.getNeg();
 						calc_buffer[n] += tmp_out;
@@ -97,25 +97,21 @@ x:
 				}
 			}
 		}
-		for (int nc = 0; nc < 32; nc++){
+		for (int nc = 0; nc < 32; nc++) {
 			output_buffer[nc][y][x] = calc_buffer[nc];
 			calc_buffer[nc] = 0;
 		}
-		for (int i = 0; i < F; i++){
-			for (int j  = 0; j < F - 1; j++)
+		for (int i = 0; i < F; i++) {
+			for (int j = 0; j < F - 1; j++)
 				window_buffer[i][j] = window_buffer[i][j + 1]; //shift windowbuffer
 			window_buffer[i][4] = line_buffer[i][next_x]; //shift next into window buffer
 		}
-		for (int i = 0; i < F-1; i++)
-			line_buffer[i][next_x] = line_buffer[i+1][next_x];
-		if (x < 25)
-			line_buffer[F - 1][next_x] = (y + 3 < I_WIDTH1) ? input[y + 3][next_x] : bit(0);
-		else
-			line_buffer[F - 1][next_x] = (y + 4 < I_WIDTH2) ? input[y + 4][next_x] : bit(0);
+		for (int i = 0; i < F - 1; i++)
+			line_buffer[i][next_x] = line_buffer[i + 1][next_x];
+		line_buffer[F - 1][next_x] = (y + 3<I_WIDTH1) ? input[y + 3][next_x] : bit(0);
 	}
 	store_ofmap(output_buffer, output);
 }
-
 
 void max_pool(bit64_t input[28][28], bit64_t output[14][14], int M, int I){
 	int O = I / 2;
@@ -168,7 +164,7 @@ inline int popcount(unsigned long long x){
     return x & 0x000000000000007F;
 }
 
-void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[MAX_W_CONV/32]){
+void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[MAX_W_CONV / 32]) {
 #pragma HLS ARRAY_PARTITION variable=k2 complete
 #pragma HLS ARRAY_PARTITION variable=h2 complete
 
@@ -186,12 +182,12 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 
 	int mac_num = 0;
 
-	for (int n = 0; n < 64; n += 8){
+	for (int n = 0; n < 64; n += 8) {
 		ld_wt(n, w_buff, weight);
 		for (int j = 0; j < I_WIDTH2; j++)
 			for (int i = 0; i < 3; i++)
 #pragma HLS PIPELINE
-				line_buff[i+2][j] = input[i][j](31, 0);
+				line_buff[i + 2][j] = input[i][j](31, 0);
 		for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
 			for (int i = 0; i < F; i++) {
@@ -224,12 +220,9 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 					window_buff[i][j] = window_buff[i][j + 1]; //shift window buffer
 				window_buff[i][4] = line_buff[i][next_x]; //shift next into windowbuffer
 			}
-			for (int i = 0; i < F-1; i++) 
+			for (int i = 0; i < F - 1; i++)
 				line_buff[i][next_x] = line_buff[i + 1][next_x];
-			if (x < 11)
-				line_buff[F - 1][next_x] = (y + 3 < 14) ? input[y + 3][next_x](31, 0) : bit32_t(0);
-			else
-				line_buff[F - 1][next_x] = (y + 4 < 14) ? input[y + 4][next_x](31, 0) : bit32_t(0);
+			line_buff[F - 1][next_x] = (y + 3 < 14) ? input[y + 3][next_x](31, 0) : bit32_t(0);
 			for (int nn = 0; nn < 8; nn++) {
 				fix tmp = ((mac_num << 5) - (count[nn] << 1)) * k2[n + nn];
 				output[y][x][n + nn] = (tmp + h2[n + nn]).is_neg() ? 0 : 1;
@@ -240,7 +233,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 	}
 }
 
-void ld_wt_fc1(bit64_t input[14][14], bit64_t i_buff[7], bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
+void ld_wt_fc1(bit64_t input[batch][14][14], bit64_t i_buff[batch][7], bit64_t weight[MAX_W_FC/64], bit64_t w_buff[7]){
 
 	static int m = 0;
 	static int n = 0;
@@ -249,7 +242,8 @@ void ld_wt_fc1(bit64_t input[14][14], bit64_t i_buff[7], bit64_t weight[MAX_W_FC
 #pragma HLS PIPELINE
 		int w_index = MN + i;
 		w_buff[i] = weight[w_index];
-		i_buff[i] = input[m][i];
+		for(int b = 0; b < batch; b++)
+			i_buff[b][i] = input[b][m][i];
 	}
 	m++;
 	if (m == 7) {
@@ -260,27 +254,38 @@ void ld_wt_fc1(bit64_t input[14][14], bit64_t i_buff[7], bit64_t weight[MAX_W_FC
 	}
 }
 
-void calc_1(bit64_t w_buff[7], bit64_t i_buff[7], bit64_t output[8], const fix con){
+void calc_1(bit64_t w_buff[7], bit64_t i_buff[batch][7], bit64_t output[batch][8], const fix con){
 
 	static int m = 0;
 	static int n = 0;
-	static int count = 0;
-	static bit64_t tmp_out = 0;
+	static int count[batch];
+	int calc_result[batch];
+	static bit64_t tmp_out[batch];
+	bit64_t tmp[batch];
 	int M = 7 * m;
 	m++;
 	for (int mm = 0; mm < 7; mm++){
 #pragma HLS UNROLL
-		bit64_t tmp = w_buff[mm] ^ i_buff[mm];
-		count += popcount(tmp.to_uint64());
+		for (int b = 0; b < batch; b++){
+#pragma HLS UNROLL
+			tmp[b] = w_buff[mm] ^ i_buff[b][mm];
+			count[b] += popcount(tmp[b].to_uint64());
+		}
 	}
 	if (m == 7){
-		int calc_result = FC1_UNITS - (count << 1);
-		tmp_out[n & 63] = (calc_result * con + b_fc1[n]).is_neg() ? 0 : 1;
-		count = 0;
+		for (int b = 0; b < batch; b++) {
+#pragma HLS UNROLL
+			calc_result[b] = FC1_UNITS - (count[b] << 1);
+			tmp_out[b][n & 63] = (calc_result[b] * con + b_fc1[n]).is_neg() ? 0 : 1;
+			count[b] = 0;
+		}
 		n++;
 		if ((n & 63) == 0) {
-			output[(n >> 6) - 1] = tmp_out;
-			tmp_out = 0;
+			for (int b = 0; b< batch; b++){
+#pragma HLS UNROLL
+				output[b][(n >> 6) - 1] = tmp_out[b];
+				tmp_out[b] = 0;
+			}
 			if (n & 512)
 				n = 0;
 		}
@@ -288,12 +293,12 @@ void calc_1(bit64_t w_buff[7], bit64_t i_buff[7], bit64_t output[8], const fix c
 	}
 }
 
-void dense_1(bit64_t input[14][14], bit64_t output[8], bit64_t weight[MAX_W_FC/64], const fix con){
+void dense_1(bit64_t input[batch][14][14], bit64_t output[batch][8], bit64_t weight[MAX_W_FC/64], const fix con){
 #pragma HLS INLINE off
 	bit64_t w_buff[7];
 #pragma HLS ARRAY_PARTITION variable=w_buff complete
-	bit64_t i_buff[7];
-#pragma HLS ARRAY_PARTITION variable=i_buff complete
+	bit64_t i_buff[batch][7];
+#pragma HLS ARRAY_PARTITION variable=i_buff complete dim=0
 	/*for (int i = 0; i < 7; i++)
 #pragma HLS UNROLL
 		w_buff[i]=0;*/
@@ -332,31 +337,37 @@ void dense_2(bit64_t input[8], fixo output[10], bit64_t weight[80], const fix co
 	}
 }
 
-void bnn(bit8_t x[I_WIDTH1 * I_WIDTH1], fixo output[10], bit64_t weight1[MAX_W_FC/64], bit64_t weight2[80]){
+void bnn(bit8_t x[batch * I_WIDTH1 * I_WIDTH1], fixo output[batch][10], bit64_t weight1[MAX_W_FC/64], bit64_t weight2[80]){
 
-	bit mem1[28][28];
-	bit64_t mem2[28][28];
-	bit64_t mem3[14][14];
-	bit64_t memfc2[8];
-#pragma HLS ARRAY_PARTITION variable=memfc2 complete
+	bit mem1[batch][28][28];
+	bit64_t mem2[batch][28][28];
+	bit64_t mem3[batch][14][14];
+#pragma HLS ARRAY_PARTITION variable=mem3 dim=1
+	bit64_t memfc2[batch][8];
+#pragma HLS ARRAY_PARTITION variable=memfc2 complete dim=2
 
-	for (int i = 0; i < I_WIDTH1; i++)
-		for (int j = 0; j < I_WIDTH1; j++){
+	for (int b = 0; b < batch; b++)
+		for (int i = 0; i < I_WIDTH1; i++)
+			for (int j = 0; j < I_WIDTH1; j++){
 #pragma HLS PIPELINE
-			int i_index = j + i*I_WIDTH1;
-			mem1[i][j] = x[i_index];
-		}
+				int i_index = j + i*I_WIDTH1 + b*I_WIDTH1*I_WIDTH1;
+				mem1[b][i][j] = x[i_index];
+			}
 
-	conv_1(mem1, mem2, w_conv1, con1);
+	for (int b = 0; b < batch; b++)
+		conv_1(mem1[b], mem2[b], w_conv1, con1);
+	for (int b = 0; b < batch; b++)
+		max_pool(mem2[b], mem3[b], 32, I_WIDTH1);
 
-	max_pool(mem2, mem3, 32, I_WIDTH1);
+	for (int b = 0; b < batch; b++)
+		conv_2(mem3[b], mem2[b], w_conv2);
 
-	conv_2(mem3, mem2, w_conv2);
-
-	max_pool(mem2, mem3, 64, I_WIDTH2);
+	for (int b = 0; b < batch; b++)
+		max_pool(mem2[b], mem3[b], 64, I_WIDTH2);
 
 	dense_1(mem3, memfc2, weight1, con_fc1);
 
-	dense_2(memfc2, output, weight2, con_fc2);
+	for (int b = 0; b < batch; b++)
+		dense_2(memfc2[b], output[b], weight2, con_fc2);
 
 }
