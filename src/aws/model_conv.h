@@ -4,7 +4,7 @@
 #include"layer.h"
 
 const bit w_conv1[MAX_W_CONV] = {
-    #include"../../data/weight_0b"
+    #include"../../data/weight_conv1"
 }; //binary weight
 
 const fix k1[MAX_F] = {
@@ -16,7 +16,7 @@ const fix h1[MAX_F] = {
 };
 
 const bit32_t w_conv2[MAX_W_CONV/32] = {
-    #include"../../data/weight_5bp"
+    #include"../../data/weight_conv2bp"
 }; //binary weight
 
 const fix k2[MAX_F] = {

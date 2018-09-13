@@ -67,7 +67,7 @@ void conv_1(bit input[28][28], bit64_t output[28][28], const bit weight[MAX_W_CO
 	} //initialize linebuffer
 	for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-		for (int i = 2; i < F; i++) {
+		for (int i = 0; i < F; i++) {
 			window_buffer[i][j + 2] = line_buffer[i][j];
 			if (i < F - 1)
 				line_buffer[i][j] = line_buffer[i + 1][j];
@@ -191,7 +191,7 @@ void conv_2(bit64_t input[14][14], bit64_t output[28][28], const bit32_t weight[
 				line_buff[i+2][j] = input[i][j](31, 0);
 		for (int j = 0; j < 3; j++) {
 #pragma HLS PIPELINE
-			for (int i = 2; i < F; i++) {
+			for (int i = 0; i < F; i++) {
 				window_buff[i][j + 2] = line_buff[i][j];
 				if (i < F - 1)
 					line_buff[i][j] = line_buff[i + 1][j];
