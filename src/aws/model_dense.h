@@ -8,7 +8,7 @@ const bit64_t w_fc1[MAX_W_FC/64] = {
 };
 
 const fix b_fc1[FC2_UNITS] = {
-#include"../../data/weight_11p"
+#include"../../data/weight_bfc1"
 };
 
 const bit64_t w_fc2[80] = {
@@ -16,7 +16,7 @@ const bit64_t w_fc2[80] = {
 };
 
 const fix b_fc2[OUT] = {
-#include"../../data/weight_13p"
+#include"../../data/weight_bfc2"
 };
 
 #endif
